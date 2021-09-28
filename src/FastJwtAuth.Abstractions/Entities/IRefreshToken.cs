@@ -15,6 +15,6 @@ namespace FastJwtAuth.Abstractions.Entities
         /// <summary>
         /// ExpireDate for RefreshToken. Generally Stored in utc
         /// </summary>
-        public DateTime ExpireDate { get; set; }
+        public DateTime ExpiresAt { get; set; }
     }
 }

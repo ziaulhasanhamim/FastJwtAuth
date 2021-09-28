@@ -21,7 +21,7 @@ namespace FastJwtAuth.Core.Tests.AutofixtureUtils
             {
                 Fixture fixture = new();
                 fixture.Customize(new AutoNSubstituteCustomization());
-                fixture.Customize<FastAuthOptions>(c => c.Without(options => options.SigningCredentials));
+                fixture.Customize<FastAuthOptions>(c => c.Without(options => options.DefaultSigningCredentials));
                 return fixture;
             })
         {

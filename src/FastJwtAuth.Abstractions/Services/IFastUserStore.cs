@@ -14,6 +14,8 @@ namespace FastJwtAuth.Abstractions.Services
     /// <typeparam name="TUser">Type of User Entity</typeparam>
     /// <typeparam name="TRefreshToken">Type of RefreshToken Entity</typeparam>
     public interface IFastUserStore<TUser, TRefreshToken>
+        where TUser : class 
+        where TRefreshToken : class
     {
         /// <summary>
         /// Validate User Entity
@@ -76,5 +78,45 @@ namespace FastJwtAuth.Abstractions.Services
         /// <param name="user">User Entity</param>
         /// <param name="password">Unhashed text password</param>
         void SetPassword(TUser user, string password);
+
+        /// <summary>
+        /// Update user entity on db
+        /// </summary>
+        Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Check if Refresh token expired
+        /// </summary>
+        bool IsRefreshTokenExpired(TRefreshToken refreshTokenEntity);
+
+        /// <summary>
+        /// Gets referesh token and user by identifier 
+        /// </summary>
+        /// <param name="refreshTokenIdentifier">Referesh token identifier</param>
+        /// <param name="cancellationToken">This can be used to cancel the operation</param>
+        /// <returns>A tuple containing user and tuple</returns>
+        Task<(TRefreshToken? refreshToken, TUser? user)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
+        
+        /// <summary>
+        /// Check if Refresh token already used
+        /// </summary>
+        bool IsRefreshTokenUsed(TRefreshToken refreshTokenEntity);
+
+        /// <param name="userIdentifier">Identifier for user such as email or username</param>
+        /// <returns>User Entity or null if not found</returns>
+        Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Verify password with the user's password
+        /// </summary>
+        /// <param name="user">User Entity</param>
+        /// <param name="password">Unhashed text password</param>
+        /// <returns>true if password was right</returns>
+        bool VerifyPassword(TUser user, string password);
+
+        /// <summary>
+        /// Make the refresh token used. so that it cant be used anymore
+        /// </summary>
+        Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
     }
 }

@@ -15,7 +15,7 @@ namespace FastJwtAuth.Core.Tests.Entities
 
         public string? PasswordHash { get; set; }
 
-        public DateTime CreationDate { get; set; }
+        public DateTime CreatedAt { get; set; }
 
         public DateTime? LastLogin { get; set; }
     }
@@ -29,6 +29,6 @@ namespace FastJwtAuth.Core.Tests.Entities
         /// <summary>
         /// ExpireDate for RefreshToken. Generally Stored in utc
         /// </summary>
-        public DateTime ExpireDate { get; set; }
+        public DateTime ExpiresAt { get; set; }
     }
 }

@@ -20,6 +20,6 @@ namespace FastJwtAuth.Abstractions.Dtos
 
     public record FailureAuthResult<TUser>(
         string Title,
-        Dictionary<string, List<string>> Errors)
+        Dictionary<string, List<string>>? Errors)
         : IAuthResult<TUser>;
 }

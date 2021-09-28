@@ -17,7 +17,7 @@ namespace FastJwtAuth.Abstractions.Entities
         /// <summary>
         /// User Creation date. Generally Stored in utc
         /// </summary>
-        public DateTime CreationDate { get; set; }
+        public DateTime CreatedAt { get; set; }
 
         /// <summary>
         /// Last time user logged in. Generally Stored in utc
