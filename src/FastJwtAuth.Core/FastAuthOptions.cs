@@ -6,7 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FastJwtAuth.Core.Options
+namespace FastJwtAuth
 {
     public class FastAuthOptions
     {

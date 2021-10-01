@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FastJwtAuth.Abstractions.Dtos
+namespace FastJwtAuth
 {
     public interface IAuthResult<TUser>
     {

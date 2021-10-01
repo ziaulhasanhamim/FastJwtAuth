@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FastJwtAuth.Abstractions.Services
+namespace FastJwtAuth
 {
     /// <summary>
     /// Service for managing Authentication And Authorization

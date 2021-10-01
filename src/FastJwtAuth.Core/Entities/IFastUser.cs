@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FastJwtAuth.Abstractions.Entities
+namespace FastJwtAuth.Core.Entities
 {
     public interface IFastUser<TKey>
     {

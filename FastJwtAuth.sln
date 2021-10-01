@@ -5,8 +5,6 @@ VisualStudioVersion = 16.0.31605.320
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1AF15476-12E4-422B-9EA4-5BFADB9413F0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastJwtAuth.Abstractions", "src\FastJwtAuth.Abstractions\FastJwtAuth.Abstractions.csproj", "{0923E6DC-8545-4634-9F42-1D64E7851C88}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastJwtAuth.Core", "src\FastJwtAuth.Core\FastJwtAuth.Core.csproj", "{8FD26240-E13F-43DE-B31C-F5EC4CC215DA}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{51E565FE-E7F2-4C1A-9E54-B7145BB4DD93}"
@@ -24,10 +22,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0923E6DC-8545-4634-9F42-1D64E7851C88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0923E6DC-8545-4634-9F42-1D64E7851C88}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0923E6DC-8545-4634-9F42-1D64E7851C88}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0923E6DC-8545-4634-9F42-1D64E7851C88}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8FD26240-E13F-43DE-B31C-F5EC4CC215DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8FD26240-E13F-43DE-B31C-F5EC4CC215DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8FD26240-E13F-43DE-B31C-F5EC4CC215DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -41,7 +35,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0923E6DC-8545-4634-9F42-1D64E7851C88} = {1AF15476-12E4-422B-9EA4-5BFADB9413F0}
 		{8FD26240-E13F-43DE-B31C-F5EC4CC215DA} = {1AF15476-12E4-422B-9EA4-5BFADB9413F0}
 		{E78D3F70-0F7C-4487-8C89-45EE34F0E152} = {51E565FE-E7F2-4C1A-9E54-B7145BB4DD93}
 	EndGlobalSection

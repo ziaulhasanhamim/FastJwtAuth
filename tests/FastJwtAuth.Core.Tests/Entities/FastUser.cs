@@ -1,4 +1,4 @@
-﻿using FastJwtAuth.Abstractions.Entities;
+﻿using FastJwtAuth.Core.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;

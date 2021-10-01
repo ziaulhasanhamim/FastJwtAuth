@@ -1,8 +1,6 @@
 ﻿using AutoFixture.Xunit2;
-using FastJwtAuth.Abstractions.Dtos;
-using FastJwtAuth.Abstractions.Services;
-using FastJwtAuth.Core.Options;
 using FastJwtAuth.Core.Services;
+using FastJwtAuth;
 using FastJwtAuth.Core.Tests.AutofixtureUtils;
 using FastJwtAuth.Core.Tests.Entities;
 using FluentAssertions;

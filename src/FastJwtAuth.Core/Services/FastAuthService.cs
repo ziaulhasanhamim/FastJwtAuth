@@ -1,6 +1,4 @@
-﻿using FastJwtAuth.Abstractions.Dtos;
-using FastJwtAuth.Abstractions.Services;
-using FastJwtAuth.Core.Options;
+﻿using FastJwtAuth;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
