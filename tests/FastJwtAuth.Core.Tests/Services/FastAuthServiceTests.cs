@@ -23,8 +23,8 @@ namespace FastJwtAuth.Core.Tests.Services
         public async Task CreateUserAsync_InvalidInput_FailureAuthResult(
             FastUser user,
             string password,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             Dictionary<string, List<string>> errors = new()
             {
@@ -43,10 +43,10 @@ namespace FastJwtAuth.Core.Tests.Services
         public async Task CreateUserAsync_ValidInput_SuccessAuthResult(
             FastUser user,
             string password,
-            RefreshToken refreshToken,
+            FastRefreshToken refreshToken,
             [Frozen] FastAuthOptions fastAuthOptions,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             fastAuthOptions.UseRefreshToken = true;
             fastAuthOptions.AccessTokenLifeSpan = TimeSpan.FromMinutes(15);
@@ -89,8 +89,8 @@ namespace FastJwtAuth.Core.Tests.Services
         public async Task LoginUserAsync_InvalidEmail_FailureAuthResult(
             string userIdentifier,
             string password,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             userStore.GetUserByIdentifierAsync(userIdentifier)
                 .Returns((FastUser)null!);
@@ -108,8 +108,8 @@ namespace FastJwtAuth.Core.Tests.Services
         public async Task LoginUserAsync_InvalidPassword_FailureAuthResult(
             FastUser user,
             string password,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             userStore.GetUserByIdentifierAsync(user.Email!)
                 .Returns(user);
@@ -130,10 +130,10 @@ namespace FastJwtAuth.Core.Tests.Services
         public async Task LoginUserAsync_ValidInput_SuccessAuthResult(
             FastUser user,
             string password,
-            RefreshToken refreshToken,
+            FastRefreshToken refreshToken,
             [Frozen] FastAuthOptions fastAuthOptions,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             fastAuthOptions.UseRefreshToken = true;
             fastAuthOptions.AccessTokenLifeSpan = TimeSpan.FromMinutes(15);
@@ -172,8 +172,8 @@ namespace FastJwtAuth.Core.Tests.Services
         [Theory, MoreAutoData]
         public async Task RefreshAsync_InvalidRefreshToken_FailureAuthResult(
             string refreshToken,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             userStore.GetRefreshTokenByIdentifierAsync(refreshToken)
                 .Returns((null, null));
@@ -190,9 +190,9 @@ namespace FastJwtAuth.Core.Tests.Services
         [Theory, MoreAutoData]
         public async Task RefreshAsync_ExpiredRefreshToken_FailureAuthResult(
             FastUser user,
-            RefreshToken refreshToken,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            FastRefreshToken refreshToken,
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             userStore.GetRefreshTokenByIdentifierAsync(refreshToken.Id!)
                 .Returns((refreshToken, user));
@@ -212,9 +212,9 @@ namespace FastJwtAuth.Core.Tests.Services
         [Theory, MoreAutoData]
         public async Task RefreshAsync_UsedRefreshToken_FailureAuthResult(
             FastUser user,
-            RefreshToken refreshToken,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            FastRefreshToken refreshToken,
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             userStore.GetRefreshTokenByIdentifierAsync(refreshToken.Id!)
                 .Returns((refreshToken, user));
@@ -234,10 +234,10 @@ namespace FastJwtAuth.Core.Tests.Services
         [Theory, MoreAutoData]
         public async Task RefreshAsync_ValidRefreshToken_SuccessAuthResult(
             FastUser user,
-            RefreshToken refreshToken,
+            FastRefreshToken refreshToken,
             [Frozen] FastAuthOptions fastAuthOptions,
-            [Frozen] IFastUserStore<FastUser, RefreshToken> userStore,
-            FastAuthService<FastUser, RefreshToken> authService)
+            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
+            FastAuthService<FastUser, FastRefreshToken> authService)
         {
             fastAuthOptions.UseRefreshToken = true;
             fastAuthOptions.AccessTokenLifeSpan = TimeSpan.FromMinutes(15);
@@ -277,7 +277,7 @@ namespace FastJwtAuth.Core.Tests.Services
             await userStore.Received(1).UpdateUserAsync(user);
         }
 
-        private static void assertResult(FastUser user, RefreshToken refreshToken, FastAuthOptions fastAuthOptions, SymmetricSecurityKey securityKey, IAuthResult<FastUser> result)
+        private static void assertResult(FastUser user, FastRefreshToken refreshToken, FastAuthOptions fastAuthOptions, SymmetricSecurityKey securityKey, IAuthResult<FastUser> result)
         {
             var successResult = result.Should().BeOfType<SuccessAuthResult<FastUser>>().Which;
             successResult.RefreshToken.Should().Be(refreshToken.Id);

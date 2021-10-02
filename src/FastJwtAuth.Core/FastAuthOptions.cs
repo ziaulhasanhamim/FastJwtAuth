@@ -25,13 +25,18 @@ namespace FastJwtAuth
         public TimeSpan RefreshTokenLifeSpan { get; set; } = TimeSpan.FromDays(15);
 
         /// <summary>
-        /// This event is fired when generating claims. It Gives a List of previously created claims, user entity and service provider as parameter. New claims should be added to the List
+        /// Number of bytes to generate for refresh token. Default to 32
         /// </summary>
-        public event Action<List<Claim>, object, IServiceProvider>? OnClaimsGeneration;
+        public int RefreshTokenBytesLength { get; set; } = 32;
 
         /// <summary>
-        /// This event is fired when validating user. It Gives a user entity and service provider as parameter. if user is valid returns null else Dictionary of errors.
+        /// This event is fired when generating claims. It Gives a List of previously created claims, user entity and service provider as parameter. New claims should be added to the List
         /// </summary>
-        public event Func<object, IServiceProvider, Dictionary<string, List<string>>>? OnUserValidate;
+        public Action<List<Claim>, object>? OnClaimsGeneration { get; set; }
+
+        /// <summary>
+        /// This event is fired when validating user. It Gives a user entity and a db accessor(DbContext for ef core) as parameters. if user is valid returns null else Dictionary of errors.
+        /// </summary>
+        public Func<object, object, Task<Dictionary<string, List<string>>>>? OnUserValidate { get; set; }
     }
 }

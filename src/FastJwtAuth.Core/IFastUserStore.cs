@@ -95,7 +95,7 @@ namespace FastJwtAuth
         /// <param name="refreshTokenIdentifier">Referesh token identifier</param>
         /// <param name="cancellationToken">This can be used to cancel the operation</param>
         /// <returns>A tuple containing user and tuple</returns>
-        Task<(TRefreshToken? refreshToken, TUser? user)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
+        Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Check if Refresh token already used

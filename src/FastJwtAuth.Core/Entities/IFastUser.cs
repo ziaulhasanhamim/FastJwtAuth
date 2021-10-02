@@ -8,7 +8,7 @@ namespace FastJwtAuth.Core.Entities
 {
     public interface IFastUser<TKey>
     {
-        public TKey Id { get; set; }
+        public TKey? Id { get; set; }
 
         public string? Email { get; set; }
 

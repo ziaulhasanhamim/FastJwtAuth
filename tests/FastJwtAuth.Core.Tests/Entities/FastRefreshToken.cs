@@ -1,0 +1,14 @@
+﻿using FastJwtAuth.Core.Entities;
+using System;
+
+namespace FastJwtAuth.Core.Tests.Entities
+{
+    public class FastRefreshToken : IFastRefreshToken<Guid>
+    {
+        public string? Id { get; set; }
+
+        public Guid UserId { get; set; }
+
+        public DateTime ExpiresAt { get; set; }
+    }
+}

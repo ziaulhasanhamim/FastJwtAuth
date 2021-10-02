@@ -142,11 +142,16 @@ namespace FastJwtAuth.Core.Services
                 refreshToken = _userStore.GetRefreshTokenIdentifier(refreshTokenEntity);
                 refreshTokenExpireDate = _userStore.GetRefreshTokenExpireDate(refreshTokenEntity);
             }
+            signingCredentials ??= _authOptions.DefaultSigningCredentials;
+            if (signingCredentials is null)
+            {
+                throw new ArgumentException("No SigningCredentials was provided and DefaultSigningCredentials on FastAuthOptions is also null");
+            }
             var claims = _userStore.GetClaimsForUser(user);
             JwtSecurityToken securityToken = new(
                 claims: claims,
                 expires: DateTime.UtcNow.Add(_authOptions.AccessTokenLifeSpan),
-                signingCredentials: signingCredentials ?? _authOptions.DefaultSigningCredentials);
+                signingCredentials: signingCredentials);
             var accessToken = new JwtSecurityTokenHandler().WriteToken(securityToken);
 
             return new(
