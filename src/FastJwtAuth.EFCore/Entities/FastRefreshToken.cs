@@ -25,7 +25,13 @@ namespace FastJwtAuth.EFCore.Entities
         public DateTime ExpiresAt { get; set; }
     }
 
-    public class FastRefreshToken : FastRefreshToken<Guid, FastUser>
+    public class FastRefreshToken<TUser> : FastRefreshToken<Guid, TUser>
+        where TUser : FastUser
+    {
+
+    }
+
+    public class FastRefreshToken : FastRefreshToken<FastUser>
     {
 
     }

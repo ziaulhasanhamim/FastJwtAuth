@@ -14,12 +14,22 @@ namespace FastJwtAuth
     public static class Extensions
     {
         public static void ConfigureAuthModels<TUser, TKey>(this ModelBuilder builder, FastAuthOptions authOptions)
-            where TUser : FastUser<TKey>
+            where TUser : FastUser<TKey>, new()
         {
             builder.Entity<TUser>();
             if (authOptions.UseRefreshToken)
             {
                 builder.Entity<FastRefreshToken<TKey, TUser>>();
+            }
+        }
+
+        public static void ConfigureAuthModels<TUser>(this ModelBuilder builder, FastAuthOptions authOptions)
+            where TUser : FastUser, new()
+        {
+            builder.Entity<TUser>();
+            if (authOptions.UseRefreshToken)
+            {
+                builder.Entity<FastRefreshToken<TUser>>();
             }
         }
 
@@ -45,6 +55,21 @@ namespace FastJwtAuth
             services.AddScoped<
                 IFastAuthService<TUser, FastRefreshToken<TKey, TUser>>,
                 FastAuthService<TUser, FastRefreshToken<TKey, TUser>>>();
+        }
+
+        public static void AddFastAuthWithEFCore<TUser, TDbContext>(this IServiceCollection services, Action<FastAuthOptions> optionAction)
+            where TUser : FastUser, new()
+            where TDbContext : DbContext
+        {
+            FastAuthOptions authOptions = new();
+            optionAction(authOptions);
+            services.AddSingleton(authOptions);
+            services.AddScoped<
+                IFastUserStore<TUser, FastRefreshToken<TUser>>,
+                FastUserStore<TUser, FastRefreshToken<TUser>, Guid, TDbContext>>();
+            services.AddScoped<
+                IFastAuthService<TUser>,
+                FastAuthService<TUser>>();
         }
 
         public static void AddFastAuthWithEFCore<TDbContext>(this IServiceCollection services, Action<FastAuthOptions> optionAction)
