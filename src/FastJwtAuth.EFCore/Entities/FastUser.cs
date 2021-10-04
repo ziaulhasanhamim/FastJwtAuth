@@ -10,10 +10,10 @@ using System.Threading.Tasks;
 namespace FastJwtAuth.EFCore.Entities
 {
     [Index(nameof(Email))]
-    public class FastUser<TKey> : IFastUser<TKey>
+    public class FastUser : IFastUser<Guid>
     {
         [Key]
-        public TKey? Id { get; set; }
+        public Guid Id { get; set; }
 
         [Required]
         public string? Email { get; set; }
@@ -25,10 +25,5 @@ namespace FastJwtAuth.EFCore.Entities
         public DateTime CreatedAt { get; set; }
 
         public DateTime? LastLogin { get; set; }
-    }
-
-    public class FastUser : FastUser<Guid>
-    {
-
     }
 }

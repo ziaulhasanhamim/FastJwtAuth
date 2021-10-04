@@ -9,26 +9,20 @@ using System.Threading.Tasks;
 
 namespace FastJwtAuth.EFCore.Entities
 {
-    public class FastRefreshToken<TUserKey, TUser> : IFastRefreshToken<TUserKey>
-        where TUser : FastUser<TUserKey>
+    public class FastRefreshToken<TUser> : IFastRefreshToken<Guid>
+        where TUser : FastUser
     {
         [Key]
         public string? Id { get; set; }
 
         [Required]
-        public TUserKey? UserId { get; set; }
+        public Guid UserId { get; set; }
 
         [Required, ForeignKey(nameof(UserId))]
         public TUser? User { get; set; }
 
         [Required]
         public DateTime ExpiresAt { get; set; }
-    }
-
-    public class FastRefreshToken<TUser> : FastRefreshToken<Guid, TUser>
-        where TUser : FastUser
-    {
-
     }
 
     public class FastRefreshToken : FastRefreshToken<FastUser>

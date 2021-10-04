@@ -16,9 +16,9 @@ using System.Threading.Tasks;
 
 namespace FastJwtAuth.EFCore.Services
 {
-    public class FastUserStore<TUser, TRefreshToken, TKey, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, TKey>
-        where TUser : FastUser<TKey>, new()
-        where TRefreshToken : FastRefreshToken<TKey, TUser>, new()
+    public class FastUserStore<TUser, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, Guid>
+        where TUser : FastUser, new()
+        where TRefreshToken : FastRefreshToken<TUser>, new()
         where TDbContext : DbContext
     {
         private readonly TDbContext _dbContext;

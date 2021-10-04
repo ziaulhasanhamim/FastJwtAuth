@@ -32,7 +32,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
                 });
             };
 
-            FastUserStore<FastUser, FastRefreshToken, Guid, DbContext> userStore = new(null!, authOptions);
+            FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(null!, authOptions);
 
             var result = await userStore.ValidateUserAsync(user, password);
 
@@ -62,7 +62,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
 
             dbContext.Add(user);
 
-            FastUserStore<FastUser, FastRefreshToken, Guid, DbContext> userStore = new(dbContext, authOptions);
+            FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions);
 
             var result = await userStore.ValidateUserAsync(user, password);
 

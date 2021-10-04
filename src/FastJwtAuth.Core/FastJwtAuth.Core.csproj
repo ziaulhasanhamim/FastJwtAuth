@@ -3,8 +3,22 @@
 	<PropertyGroup>
 		<TargetFramework>net5.0</TargetFramework>
 		<Nullable>enable</Nullable>
+		<PackageId>FastJwtAuth.Core</PackageId>
+		<Title>FastJwtAuth</Title>
+		<Version>0.1.0</Version>
+		<Authors>Ziaul Hasan Hamim</Authors>
+		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token</Description>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageTags>fastjwtauth;fastauthentication;auth;authentication;authorization;fastauth;jwt;security</PackageTags>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<RepositoryUrl>https://github.com/ziaulhasanhamim/FastJwtAuth</RepositoryUrl>
+		<PackageIcon>icon.jpg</PackageIcon>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="../../icon.jpg" Pack="true" PackagePath=""/>
+	</ItemGroup>
+	
 	<ItemGroup>
 	  <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
 	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.12.2" />

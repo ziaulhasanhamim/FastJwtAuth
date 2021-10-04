@@ -3,8 +3,22 @@
 	<PropertyGroup>
 		<TargetFramework>net5.0</TargetFramework>
 		<Nullable>enable</Nullable>
+		<PackageId>FastJwtAuth.EFCore</PackageId>
+		<Title>FastJwtAuth Using EF Core</Title>
+		<Version>0.1.0</Version>
+		<Authors>Ziaul Hasan Hamim</Authors>
+		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token using Ef Core</Description>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageTags>fastjwtauth;efcore;auth;authentication;authorization;fastauth;jwt;security</PackageTags>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<RepositoryUrl>https://github.com/ziaulhasanhamim/FastJwtAuth</RepositoryUrl>
+		<PackageIcon>icon.jpg</PackageIcon>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="../../icon.jpg" Pack="true" PackagePath=""/>
+	</ItemGroup>
+	
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.10" />
 	</ItemGroup>
