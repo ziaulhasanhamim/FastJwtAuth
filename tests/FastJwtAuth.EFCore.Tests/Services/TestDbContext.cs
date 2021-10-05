@@ -7,9 +7,23 @@ namespace FastJwtAuth.EFCore.Tests.Services
 {
     public class TestDbContext : DbContext
     {
-        public TestDbContext()
+        private TestDbContext()
         {
-            Database.EnsureCreated();
+
+        }
+
+        public static TestDbContext Init()
+        {
+            TestDbContext dbContext = new();
+            dbContext.Database.EnsureCreated();
+            return dbContext;
+        }
+
+        public static async Task<TestDbContext> InitAsync()
+        {
+            TestDbContext dbContext = new();
+            await dbContext.Database.EnsureCreatedAsync();
+            return dbContext;
         }
 
         public DbSet<FastUser> Users { get; set; } = null!;

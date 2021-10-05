@@ -58,9 +58,10 @@ namespace FastJwtAuth.EFCore.Tests.Services
                 });
             };
 
-            using var dbContext = new TestDbContext();
+            await using var dbContext = await TestDbContext.InitAsync();
 
             dbContext.Add(user);
+            await dbContext.SaveChangesAsync();
 
             FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions);
 
@@ -71,6 +72,21 @@ namespace FastJwtAuth.EFCore.Tests.Services
             result!.ContainsKey(nameof(FastUser.Email)).Should().BeTrue();
             result!.ContainsKey("Password").Should().BeTrue();
             result!.ContainsKey("TestField").Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task ValidateUserAsync_AllOkay_NullReturned()
+        {
+            FastUser user = new() { Email = "test@test.com" };
+            var password = "test1234";
+
+            await using var dbContext = await TestDbContext.InitAsync();
+
+            FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, new());
+
+            var result = await userStore.ValidateUserAsync(user, password);
+
+            result.Should().BeNull();
         }
     }
 }

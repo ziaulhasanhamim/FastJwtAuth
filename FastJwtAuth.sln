@@ -19,7 +19,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastJwtAuth.EFCore", "src\FastJwtAuth.EFCore\FastJwtAuth.EFCore.csproj", "{3B95FFF0-ECCE-452E-9343-323C6551A50F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastJwtAuth.EFCore.Tests", "tests\FastJwtAuth.EFCore.Tests\FastJwtAuth.EFCore.Tests.csproj", "{47D26D82-EB7C-449D-B182-1A986917A807}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastJwtAuth.EFCore.Tests", "tests\FastJwtAuth.EFCore.Tests\FastJwtAuth.EFCore.Tests.csproj", "{47D26D82-EB7C-449D-B182-1A986917A807}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{7864A3C1-E482-4D44-A106-FF8A6A0877E9}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GettingStarted-EFCore", "examples\GettingStarted-EFCore\GettingStarted-EFCore.csproj", "{107FD34B-BB9E-4612-BAE3-3CBBB5C645B5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +47,10 @@ Global
 		{47D26D82-EB7C-449D-B182-1A986917A807}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47D26D82-EB7C-449D-B182-1A986917A807}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{47D26D82-EB7C-449D-B182-1A986917A807}.Release|Any CPU.Build.0 = Release|Any CPU
+		{107FD34B-BB9E-4612-BAE3-3CBBB5C645B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{107FD34B-BB9E-4612-BAE3-3CBBB5C645B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{107FD34B-BB9E-4612-BAE3-3CBBB5C645B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{107FD34B-BB9E-4612-BAE3-3CBBB5C645B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,6 +60,7 @@ Global
 		{E78D3F70-0F7C-4487-8C89-45EE34F0E152} = {51E565FE-E7F2-4C1A-9E54-B7145BB4DD93}
 		{3B95FFF0-ECCE-452E-9343-323C6551A50F} = {1AF15476-12E4-422B-9EA4-5BFADB9413F0}
 		{47D26D82-EB7C-449D-B182-1A986917A807} = {51E565FE-E7F2-4C1A-9E54-B7145BB4DD93}
+		{107FD34B-BB9E-4612-BAE3-3CBBB5C645B5} = {7864A3C1-E482-4D44-A106-FF8A6A0877E9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8C5F3330-EF32-4A3D-A9EF-0D829572E9E4}

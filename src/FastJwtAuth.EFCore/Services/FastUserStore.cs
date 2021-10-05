@@ -136,14 +136,17 @@ namespace FastJwtAuth.EFCore.Services
             }
             if (errors is null || !errors.ContainsKey(nameof(FastUser.Email)))
             {
-                if (errors is null)
-                {
-                    errors = new();
-                }
                 var emailExists = await _dbContext.Set<TUser>()
                     .Where(user2 => user2.Email == user.Email)
                     .AnyAsync(cancellationToken);
-                errors[nameof(FastUser.Email)] = new() { "Provided email already exists" };
+                if (emailExists)
+                {
+                    if (errors is null)
+                    {
+                        errors = new();
+                    }
+                    errors[nameof(FastUser.Email)] = new() { "Provided email already exists" };
+                }
             }
             return errors;
         }
