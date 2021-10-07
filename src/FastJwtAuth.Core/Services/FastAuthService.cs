@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -36,9 +37,9 @@ namespace FastJwtAuth.Core.Services
             _userStore.SetCreationDateTimes(user);
             _userStore.SetLoginDateTimes(user);
             beforeCreate?.Invoke(user);
-            await _userStore.CreateUserAsync(user, cancellationToken);
 
-            return await generateTokens(user, signingCredentials, cancellationToken);
+            await _userStore.CreateUserAsync(user, cancellationToken);
+            return await generateTokens(user!, signingCredentials, cancellationToken);
         }
 
         public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
@@ -81,7 +82,7 @@ namespace FastJwtAuth.Core.Services
             beforeLogin?.Invoke(user);
             await _userStore.UpdateUserAsync(user, cancellationToken);
 
-            return await generateTokens(user, signingCredentials, cancellationToken);
+            return await generateTokens(user!, signingCredentials, cancellationToken);
         }
 
         public Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, CancellationToken cancellationToken = default)
@@ -119,7 +120,8 @@ namespace FastJwtAuth.Core.Services
                 await _userStore.UpdateUserAsync(user!, cancellationToken);
             }
             await _userStore.MakeRefreshTokenUsedAsync(refreshTokenEntity, cancellationToken);
-            return await generateTokens(user!, signingCredentials, cancellationToken);
+            var succResult = await generateTokens(user!, signingCredentials, cancellationToken);
+            return succResult;
         }
 
         public Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
@@ -153,7 +155,6 @@ namespace FastJwtAuth.Core.Services
                 expires: DateTime.UtcNow.Add(_authOptions.AccessTokenLifeSpan),
                 signingCredentials: signingCredentials);
             var accessToken = new JwtSecurityTokenHandler().WriteToken(securityToken);
-
             return new(
                 accessToken,
                 securityToken.ValidTo,

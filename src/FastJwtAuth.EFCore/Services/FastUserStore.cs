@@ -33,7 +33,7 @@ namespace FastJwtAuth.EFCore.Services
         public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default)
         {
             var randomBytes = new byte[_authOptions.RefreshTokenBytesLength];
-            using var rng = RandomNumberGenerator.Create();
+            using var rng = new RNGCryptoServiceProvider();
             rng.GetBytes(randomBytes);
 
             TRefreshToken refreshToken = new()
@@ -107,7 +107,7 @@ namespace FastJwtAuth.EFCore.Services
             {
                 errors = await _authOptions.OnUserValidate(user, _dbContext);
             }
-            
+
             var emailValidator = new EmailAddressAttribute();
             var emailValid = emailValidator.IsValid(user.Email);
             if (!emailValid)
