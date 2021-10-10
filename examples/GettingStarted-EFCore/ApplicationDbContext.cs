@@ -1,5 +1,5 @@
 ﻿using FastJwtAuth;
-using FastJwtAuth.EFCore.Entities;
+using FastJwtAuth.EFCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

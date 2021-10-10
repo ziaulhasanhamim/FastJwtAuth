@@ -1,5 +1,4 @@
 ﻿using FastJwtAuth;
-using FastJwtAuth.EFCore.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -9,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GettingStarted.Dtos;
 using System.Diagnostics;
+using FastJwtAuth.EFCore;
 
 namespace GettingStarted.Controllers
 {

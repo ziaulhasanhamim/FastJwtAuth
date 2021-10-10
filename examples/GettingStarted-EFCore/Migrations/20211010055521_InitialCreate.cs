@@ -13,6 +13,7 @@ namespace GettingStarted.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Email = table.Column<string>(type: "TEXT", nullable: false),
+                    NormalizedEmail = table.Column<string>(type: "TEXT", nullable: false),
                     PasswordHash = table.Column<string>(type: "TEXT", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "TEXT", nullable: true)
@@ -47,9 +48,9 @@ namespace GettingStarted.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Users_Email",
+                name: "IX_Users_NormalizedEmail",
                 table: "Users",
-                column: "Email");
+                column: "NormalizedEmail");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

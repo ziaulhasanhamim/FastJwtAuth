@@ -1,5 +1,4 @@
-﻿using FastJwtAuth.EFCore.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
 

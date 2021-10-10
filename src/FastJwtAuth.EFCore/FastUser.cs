@@ -7,16 +7,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FastJwtAuth.EFCore.Entities
+namespace FastJwtAuth.EFCore
 {
-    [Index(nameof(Email))]
-    public class FastUser : IFastUser<Guid>
+    [Index(nameof(NormalizedEmail))]
+    public class FastUser<TKey> : IFastUser<TKey>
     {
         [Key]
-        public Guid Id { get; set; }
+        public TKey? Id { get; set; }
 
         [Required]
         public string? Email { get; set; }
+
+        [Required]
+        public string? NormalizedEmail { get; set; }
 
         [Required]
         public string? PasswordHash { get; set; }
@@ -25,5 +28,11 @@ namespace FastJwtAuth.EFCore.Entities
         public DateTime CreatedAt { get; set; }
 
         public DateTime? LastLogin { get; set; }
+
+    }
+
+    public class FastUser : FastUser<Guid>
+    {
+
     }
 }

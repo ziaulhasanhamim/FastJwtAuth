@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace FastJwtAuth.Core.Services
 {
@@ -12,6 +13,17 @@ namespace FastJwtAuth.Core.Services
         where TUser : class, IFastUser<TKey>
         where TRefreshToken : class, IFastRefreshToken<TKey>
     {
+        protected readonly FastAuthOptions _authOptions;
+
+        protected FastUserStoreCommons(FastAuthOptions authOptions)
+        {
+            _authOptions = authOptions;
+        }
+
+        protected abstract object getDbAccessor();
+
+        public virtual string NormalizeText(string text) => text.Normalize().ToUpperInvariant();
+
         public abstract Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default);
 
         public abstract Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default);
@@ -24,7 +36,21 @@ namespace FastJwtAuth.Core.Services
 
         public virtual string GetRefreshTokenIdentifier(TRefreshToken refreshTokenEntity) => refreshTokenEntity.Id!;
 
-        public abstract Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default);
+        public virtual Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default)
+        {
+            var normalizedUserIdentifier = NormalizeText(userIdentifier);
+            return GetUserByNormalizedIdentifier(normalizedUserIdentifier, cancellationToken);
+        }
+
+        public abstract Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
+
+        public virtual Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default)
+        {
+            var nomalizeduserIdentifier = NormalizeText(userIdentifier);
+            return DoesNormalizedUserIdentifierExist(nomalizeduserIdentifier, cancellationToken);
+        }
+
+        public abstract Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
 
         public virtual bool IsRefreshTokenExpired(TRefreshToken refreshTokenEntity) => refreshTokenEntity.ExpiresAt < DateTime.UtcNow;
 
@@ -36,11 +62,63 @@ namespace FastJwtAuth.Core.Services
 
         public virtual void SetLoginDateTimes(TUser user) => user.LastLogin = DateTime.UtcNow;
 
+        public virtual void SetNormalizedFields(TUser user)
+        {
+            user.NormalizedEmail = NormalizeText(user.Email!);
+        }
+
         public virtual void SetPassword(TUser user, string password) => user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
         public abstract Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
-        public abstract Task<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
+        public virtual async Task<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+        {
+            Dictionary<string, List<string>>? errors = null;
+            if (_authOptions.OnUserValidate is not null)
+            {
+                errors = await _authOptions.OnUserValidate(user, getDbAccessor());
+            }
+
+            var emailValidator = new EmailAddressAttribute();
+            var emailValid = emailValidator.IsValid(user.Email);
+            if (!emailValid)
+            {
+                if (errors is null)
+                {
+                    errors = new();
+                }
+                if (errors.TryGetValue(nameof(IFastUser<Guid>.Email), out var emailErrors))
+                {
+                    emailErrors.Add("Provided email is not valid");
+                }
+                errors[nameof(IFastUser<Guid>.Email)] = new() { "Provided email is not valid" };
+            }
+            if (password.Length < 8)
+            {
+                if (errors is null)
+                {
+                    errors = new();
+                }
+                if (errors.TryGetValue("Password", out var passwordErrors))
+                {
+                    passwordErrors.Add("Password must be at least 8 characters long");
+                }
+                errors["Password"] = new() { "Password must be at least 8 characters long" };
+            }
+            if (errors is null || !errors.ContainsKey(nameof(IFastUser<Guid>.Email)))
+            {
+                var emailExists = await DoesNormalizedUserIdentifierExist(user.NormalizedEmail!);
+                if (emailExists)
+                {
+                    if (errors is null)
+                    {
+                        errors = new();
+                    }
+                    errors[nameof(IFastUser<Guid>.Email)] = new() { "Provided email already exists" };
+                }
+            }
+            return errors;
+        }
 
         public virtual bool VerifyPassword(TUser user, string password) => BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
     }

@@ -1,5 +1,4 @@
 ﻿using AutoFixture.Xunit2;
-using FastJwtAuth.EFCore.Entities;
 using FastJwtAuth.EFCore.Services;
 using FastJwtAuth.EFCore.Tests.AutofixtureUtils;
 using FluentAssertions;
@@ -32,7 +31,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
                 });
             };
 
-            FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(null!, authOptions);
+            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(null!, authOptions);
 
             var result = await userStore.ValidateUserAsync(user, password);
 
@@ -63,7 +62,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
             dbContext.Add(user);
             await dbContext.SaveChangesAsync();
 
-            FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions);
+            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions);
 
             var result = await userStore.ValidateUserAsync(user, password);
 
@@ -82,7 +81,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
 
             await using var dbContext = await TestDbContext.InitAsync();
 
-            FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, new());
+            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(dbContext, new());
 
             var result = await userStore.ValidateUserAsync(user, password);
 

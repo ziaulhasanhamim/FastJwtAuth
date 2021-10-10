@@ -37,11 +37,15 @@ namespace FastJwtAuth
         void SetLoginDateTimes(TUser user);
 
         /// <summary>
+        /// Set the normalized fields like email and username
+        /// </summary>
+        void SetNormalizedFields(TUser user);
+
+        /// <summary>
         /// Add User To Database
         /// </summary>
         /// <param name="user">User entity</param>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -118,5 +122,9 @@ namespace FastJwtAuth
         /// Make the refresh token used. so that it cant be used anymore
         /// </summary>
         Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
+        Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default);
+        Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
+        Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
+        string NormalizeText(string text);
     }
 }

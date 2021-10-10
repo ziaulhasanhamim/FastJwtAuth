@@ -11,6 +11,8 @@ namespace FastJwtAuth.Core.Tests.Entities
     {
         public Guid Id { get; set; }
 
+        public string? NormalizedEmail { get; set; }
+
         public string? Email { get; set; }
 
         public string? PasswordHash { get; set; }
@@ -18,5 +20,6 @@ namespace FastJwtAuth.Core.Tests.Entities
         public DateTime CreatedAt { get; set; }
 
         public DateTime? LastLogin { get; set; }
+
     }
 }

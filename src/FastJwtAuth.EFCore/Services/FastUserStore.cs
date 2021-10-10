@@ -1,6 +1,5 @@
 ﻿using FastJwtAuth.Core.Entities;
 using FastJwtAuth.Core.Services;
-using FastJwtAuth.EFCore.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -16,19 +15,28 @@ using System.Threading.Tasks;
 
 namespace FastJwtAuth.EFCore.Services
 {
-    public class FastUserStore<TUser, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, Guid>
-        where TUser : FastUser, new()
-        where TRefreshToken : FastRefreshToken<TUser>, new()
+    public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, TUserKey>
+        where TUser : FastUser<TUserKey>, new()
+        where TRefreshToken : FastRefreshToken<TUser, TUserKey>, new()
         where TDbContext : DbContext
     {
-        private readonly TDbContext _dbContext;
-        private readonly FastAuthOptions _authOptions;
+        protected readonly TDbContext _dbContext;
 
         public FastUserStore(TDbContext dbContext, FastAuthOptions authOptions)
+            : base(authOptions)
         {
             _dbContext = dbContext;
-            _authOptions = authOptions;
         }
+
+        protected override object getDbAccessor()
+        {
+            return _dbContext;
+        }
+
+        public override Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default) => 
+            _dbContext.Set<TUser>()
+                .Where(user => user.NormalizedEmail == nomalizeduserIdentifier)
+                .AnyAsync(cancellationToken);
 
         public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default)
         {
@@ -76,79 +84,26 @@ namespace FastJwtAuth.EFCore.Services
             return (refreshToken, refreshToken?.User);
         }
 
-        public override async Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default)
-        {
-            return await _dbContext.Set<TUser>()
-                .Where(user => user.Email == userIdentifier)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
+        public override Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default) =>
+            _dbContext.Set<TUser>()
+                .Where(user => user.NormalizedEmail == normalizedUserIdentifier)
+                .FirstOrDefaultAsync(cancellationToken)!;
 
         public override bool IsRefreshTokenUsed(TRefreshToken refreshTokenEntity)
         {
             return refreshTokenEntity is null;
         }
 
-        public override async Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
+        public override Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
         {
             _dbContext.Remove(refreshTokenEntity);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            return _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        public override async Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default)
+        public override Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default)
         {
             _dbContext.Update(user);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        public override async Task<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
-        {
-            Dictionary<string, List<string>>? errors = null;
-            if (_authOptions.OnUserValidate is not null)
-            {
-                errors = await _authOptions.OnUserValidate(user, _dbContext);
-            }
-
-            var emailValidator = new EmailAddressAttribute();
-            var emailValid = emailValidator.IsValid(user.Email);
-            if (!emailValid)
-            {
-                if (errors is null)
-                {
-                    errors = new();
-                }
-                if (errors.TryGetValue(nameof(FastUser.Email), out var emailErrors))
-                {
-                    emailErrors.Add("Provided email is not valid");
-                }
-                errors[nameof(FastUser.Email)] = new() { "Provided email is not valid" };
-            }
-            if (password.Length < 8)
-            {
-                if (errors is null)
-                {
-                    errors = new();
-                }
-                if (errors.TryGetValue("Password", out var passwordErrors))
-                {
-                    passwordErrors.Add("Password must be at least 8 characters long");
-                }
-                errors["Password"] = new() { "Password must be at least 8 characters long" };
-            }
-            if (errors is null || !errors.ContainsKey(nameof(FastUser.Email)))
-            {
-                var emailExists = await _dbContext.Set<TUser>()
-                    .Where(user2 => user2.Email == user.Email)
-                    .AnyAsync(cancellationToken);
-                if (emailExists)
-                {
-                    if (errors is null)
-                    {
-                        errors = new();
-                    }
-                    errors[nameof(FastUser.Email)] = new() { "Provided email already exists" };
-                }
-            }
-            return errors;
+            return _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

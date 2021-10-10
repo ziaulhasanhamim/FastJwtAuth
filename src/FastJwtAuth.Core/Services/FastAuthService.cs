@@ -27,6 +27,7 @@ namespace FastJwtAuth.Core.Services
 
         public async Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, SigningCredentials? signingCredentials, Action<TUser>? beforeCreate, CancellationToken cancellationToken = default)
         {
+            _userStore.SetNormalizedFields(user);
             var validation_errors = await _userStore.ValidateUserAsync(user, password, cancellationToken);
             if (validation_errors is not null)
             {
