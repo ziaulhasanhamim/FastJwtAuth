@@ -22,7 +22,7 @@ namespace FastJwtAuth.Core.Services
 
         protected abstract object getDbAccessor();
 
-        public virtual string NormalizeText(string text) => text.Normalize().ToUpperInvariant();
+        public virtual string NormalizeUserIdentifier(string identifier) => identifier.Normalize().ToUpperInvariant();
 
         public abstract Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default);
 
@@ -38,7 +38,7 @@ namespace FastJwtAuth.Core.Services
 
         public virtual Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default)
         {
-            var normalizedUserIdentifier = NormalizeText(userIdentifier);
+            var normalizedUserIdentifier = NormalizeUserIdentifier(userIdentifier);
             return GetUserByNormalizedIdentifier(normalizedUserIdentifier, cancellationToken);
         }
 
@@ -46,7 +46,7 @@ namespace FastJwtAuth.Core.Services
 
         public virtual Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default)
         {
-            var nomalizeduserIdentifier = NormalizeText(userIdentifier);
+            var nomalizeduserIdentifier = NormalizeUserIdentifier(userIdentifier);
             return DoesNormalizedUserIdentifierExist(nomalizeduserIdentifier, cancellationToken);
         }
 
@@ -64,7 +64,7 @@ namespace FastJwtAuth.Core.Services
 
         public virtual void SetNormalizedFields(TUser user)
         {
-            user.NormalizedEmail = NormalizeText(user.Email!);
+            user.NormalizedEmail = NormalizeUserIdentifier(user.Email!);
         }
 
         public virtual void SetPassword(TUser user, string password) => user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);

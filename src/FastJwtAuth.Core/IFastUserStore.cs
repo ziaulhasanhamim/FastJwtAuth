@@ -106,9 +106,19 @@ namespace FastJwtAuth
         /// </summary>
         bool IsRefreshTokenUsed(TRefreshToken refreshTokenEntity);
 
+        /// <summary>
+        /// Get User from db by identifier. it will first normalize the identifier
+        /// </summary>
         /// <param name="userIdentifier">Identifier for user such as email or username</param>
         /// <returns>User Entity or null if not found</returns>
         Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Get User from db by normalized identifier. You have to provide normalized identifier
+        /// </summary>
+        /// <param name="normalizedUserIdentifier">Identifier for user such as email or username</param>
+        /// <returns>User Entity or null if not found</returns>
+        Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Verify password with the user's password
@@ -122,9 +132,17 @@ namespace FastJwtAuth
         /// Make the refresh token used. so that it cant be used anymore
         /// </summary>
         Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Check if user identifier exists. it will first normalize identifier
+        /// </summary>
         Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Check if user identifier exists. You have to provide normalized identifier
+        /// </summary>
         Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
-        Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
-        string NormalizeText(string text);
+
+        string NormalizeUserIdentifier(string identifier);
     }
 }
