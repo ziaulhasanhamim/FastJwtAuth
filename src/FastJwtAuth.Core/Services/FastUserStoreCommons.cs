@@ -107,7 +107,7 @@ namespace FastJwtAuth.Core.Services
             }
             if (errors is null || !errors.ContainsKey(nameof(IFastUser<Guid>.Email)))
             {
-                var emailExists = await DoesNormalizedUserIdentifierExist(user.NormalizedEmail!);
+                var emailExists = await DoesNormalizedUserIdentifierExist(user.NormalizedEmail!, cancellationToken);
                 if (emailExists)
                 {
                     if (errors is null)
