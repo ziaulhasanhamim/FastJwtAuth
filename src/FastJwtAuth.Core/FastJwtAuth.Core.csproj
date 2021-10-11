@@ -16,6 +16,7 @@
 		<PackageReleaseNotes>Fix some bugs</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<NoWarn>1591;1573</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
