@@ -47,7 +47,7 @@ namespace FastJwtAuth.EFCore.Services
             TRefreshToken refreshToken = new()
             {
                 Id = Convert.ToBase64String(randomBytes),
-                ExpiresAt = DateTime.UtcNow.Add(_authOptions.AccessTokenLifeSpan),
+                ExpiresAt = DateTime.UtcNow.Add(_authOptions.RefreshTokenLifeSpan),
                 UserId = user!.Id
             };
 
