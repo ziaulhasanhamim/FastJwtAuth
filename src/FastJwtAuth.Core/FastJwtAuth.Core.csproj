@@ -5,7 +5,7 @@
 		<Nullable>enable</Nullable>
 		<PackageId>FastJwtAuth.Core</PackageId>
 		<Title>FastJwtAuth</Title>
-		<Version>0.2.1</Version>
+		<Version>0.2.2</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
 		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -13,10 +13,13 @@
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<RepositoryUrl>https://github.com/ziaulhasanhamim/FastJwtAuth</RepositoryUrl>
 		<PackageIcon>icon.jpg</PackageIcon>
+		<PackageReleaseNotes>Fix some bugs</PackageReleaseNotes>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="../../icon.jpg" Pack="true" PackagePath=""/>
+		<None Include="../../icon.jpg" Pack="true" PackagePath="" />
 	</ItemGroup>
 	
 	<ItemGroup>
