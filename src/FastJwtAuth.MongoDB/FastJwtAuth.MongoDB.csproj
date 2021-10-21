@@ -1,31 +1,34 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net5.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<PackageId>FastJwtAuth.Core</PackageId>
-		<Title>FastJwtAuth</Title>
+		<PackageId>FastJwtAuth.MongoDB</PackageId>
+		<Title>FastJwtAuth Using MongoDB</Title>
 		<Version>0.2.3</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
-		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token</Description>
+		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token using MongoDB</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageTags>fastjwtauth;fastauthentication;auth;authentication;authorization;fastauth;jwt;security</PackageTags>
+		<PackageTags>fastjwtauth;mongodb;mongodb-auth;auth;authentication;authorization;fastauth;jwt;security</PackageTags>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<RepositoryUrl>https://github.com/ziaulhasanhamim/FastJwtAuth</RepositoryUrl>
 		<PackageIcon>icon.jpg</PackageIcon>
-		<PackageReleaseNotes>Fix some bugs</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<NoWarn>1591;1573</NoWarn>
 	</PropertyGroup>
-
+	
 	<ItemGroup>
 		<None Include="../../icon.jpg" Pack="true" PackagePath="" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
-	  <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
-	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.12.2" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+		<PackageReference Include="MongoDB.Driver" Version="2.13.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\FastJwtAuth.Core\FastJwtAuth.Core.csproj" />
 	</ItemGroup>
 
 </Project>

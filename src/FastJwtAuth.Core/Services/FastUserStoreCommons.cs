@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace FastJwtAuth.Core.Services
 {
@@ -24,11 +25,21 @@ namespace FastJwtAuth.Core.Services
 
         public virtual string NormalizeUserIdentifier(string identifier) => identifier.Normalize().ToUpperInvariant();
 
-        public abstract Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default);
+        public abstract Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default);
 
         public abstract Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
-        public abstract IEnumerable<Claim> GetClaimsForUser(TUser user);
+        public virtual IEnumerable<Claim> GetClaimsForUser(TUser user)
+        {
+            List<Claim> claims = new()
+            {
+                new(JwtRegisteredClaimNames.Jti, user.Id!.ToString()!),
+                new(JwtRegisteredClaimNames.Email, user.Email!),
+                new(nameof(IFastUser<Guid>.CreatedAt), user.CreatedAt.ToString()!)
+            };
+            _authOptions.OnClaimsGeneration?.Invoke(claims, user);
+            return claims;
+        }
 
         public abstract Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
 

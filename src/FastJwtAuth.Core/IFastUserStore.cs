@@ -68,7 +68,7 @@ namespace FastJwtAuth
         /// <param name="user">User entity for refresh token</param>
         /// <param name="cancellationToken">This can be used to cancel the operation</param>
         /// <returns>Created RefreshToken</returns>
-        Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default);
+        Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default);
 
 
         /// <summary>

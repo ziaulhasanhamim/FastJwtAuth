@@ -38,7 +38,7 @@ namespace FastJwtAuth.EFCore.Services
                 .Where(user => user.NormalizedEmail == nomalizeduserIdentifier)
                 .AnyAsync(cancellationToken);
 
-        public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser? user, CancellationToken cancellationToken = default)
+        public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)
         {
             var randomBytes = new byte[_authOptions.RefreshTokenBytesLength];
             using var rng = new RNGCryptoServiceProvider();
@@ -61,18 +61,6 @@ namespace FastJwtAuth.EFCore.Services
         {
             await _dbContext.AddAsync(user, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        public override IEnumerable<Claim> GetClaimsForUser(TUser user)
-        {
-            List<Claim> claims = new()
-            {
-                new(JwtRegisteredClaimNames.Jti, user.Id!.ToString()!),
-                new(JwtRegisteredClaimNames.Email, user.Email!),
-                new(nameof(FastUser.CreatedAt), user.CreatedAt.ToString()!)
-            };
-            _authOptions.OnClaimsGeneration?.Invoke(claims, user);
-            return claims;
         }
 
         public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default)
