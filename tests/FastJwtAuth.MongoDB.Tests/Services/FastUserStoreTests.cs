@@ -23,17 +23,18 @@ namespace FastJwtAuth.MongoDB.Tests.Services
         {
             user.Email = "test";
             var password = "test";
-            authOptions.OnUserValidate = (_, _) =>
+            TestUserValidator userValidator = new(user => 
             {
-                return Task.FromResult(new Dictionary<string, List<string>>()
+                Dictionary<string, List<string>> errors = new()
                 {
                     ["TestField"] = new() { "Some Error" }
-                });
-            };
+                };
+                return (false, errors)!;
+            });
 
             authOptions.MongoDatabaseGetter = _ => Substitute.For<IMongoDatabase>();
 
-            FastUserStore<FastUser, FastRefreshToken> userStore = new(authOptions, null!);
+            FastUserStore<FastUser, FastRefreshToken> userStore = new(authOptions, null!, userValidator);
 
             var result = await userStore.ValidateUserAsync(user, password);
 
@@ -52,13 +53,14 @@ namespace FastJwtAuth.MongoDB.Tests.Services
             user.Email = "test@test.com";
             user.Id = null;
             var password = "test";
-            authOptions.OnUserValidate = (_, _) =>
+            TestUserValidator userValidator = new(user => 
             {
-                return Task.FromResult(new Dictionary<string, List<string>>()
+                Dictionary<string, List<string>> errors = new()
                 {
                     ["TestField"] = new() { "Some Error" }
-                });
-            };
+                };
+                return (false, errors)!;
+            });
 
             await using MongoDBProvider dbProvider = new();
             authOptions.MongoDatabaseGetter = _ => dbProvider.TestDatabase;
@@ -66,7 +68,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
             var usersCollections = dbProvider.TestDatabase.GetCollection<FastUser>("FastUsers");
             await usersCollections.InsertOneAsync(user);
 
-            FastUserStore<FastUser, FastRefreshToken> userStore = new(authOptions, null!);
+            FastUserStore<FastUser, FastRefreshToken> userStore = new(authOptions, null!, userValidator);
 
             var result = await userStore.ValidateUserAsync(user, password);
 
@@ -80,7 +82,6 @@ namespace FastJwtAuth.MongoDB.Tests.Services
         [Theory, MoreAutoData]
         public async Task ValidateUserAsync_AllOkay_NullReturned(MongoFastAuthOptions authOptions)
         {
-            authOptions.OnUserValidate = null;
             FastUser user = new()
             {
                 Email = "test@test.com",

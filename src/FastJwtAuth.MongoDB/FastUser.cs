@@ -23,6 +23,5 @@ namespace FastJwtAuth.MongoDB
         public DateTime CreatedAt { get; set; }
 
         public DateTime? LastLogin { get; set; }
-
     }
 }

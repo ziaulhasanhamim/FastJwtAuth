@@ -33,10 +33,5 @@ namespace FastJwtAuth
         /// This event is fired when generating claims. It Gives a List of previously created claims, user entity and service provider as parameter. New claims should be added to the List
         /// </summary>
         public Action<List<Claim>, object>? OnClaimsGeneration { get; set; }
-
-        /// <summary>
-        /// This event is fired when validating user. It Gives a user entity and a db accessor(DbContext for ef core) as parameters. if user is valid returns null else Dictionary of errors.
-        /// </summary>
-        public Func<object, object, Task<Dictionary<string, List<string>>>>? OnUserValidate { get; set; }
     }
 }

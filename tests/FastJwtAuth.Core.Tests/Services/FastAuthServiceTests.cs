@@ -33,7 +33,7 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.ValidateUserAsync(user, password)
                 .Returns(errors);
 
-            var result = await authService.CreateUserAsync(user, password, null, null);
+            var result = await authService.CreateUserAsync(user, password);
 
             result.Should().BeOfType<FailureAuthResult<FastUser>>()
                 .Which.Errors.Should().HaveCount(1);
@@ -55,12 +55,6 @@ namespace FastJwtAuth.Core.Tests.Services
             SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
             SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var beforeCreateGetCalled = false;
-            Action<FastUser> beforeCreate = (user) =>
-            {
-                beforeCreateGetCalled = true;
-            };
-
             userStore.CreateRefreshTokenAsync(user, default)
                 .Returns(refreshToken);
 
@@ -74,9 +68,8 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.GetClaimsForUser(user)
                 .Returns(claims);
 
-            var result = await authService.CreateUserAsync(user, password, signingCredentials, beforeCreate);
+            var result = await authService.CreateUserAsync(user, password, true, signingCredentials);
 
-            beforeCreateGetCalled.Should().BeTrue();
             assertResult(user, refreshToken, fastAuthOptions, securityKey, result);
 
             userStore.Received(1).SetPassword(user, password);
@@ -95,7 +88,7 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.GetUserByIdentifierAsync(userIdentifier)
                 .Returns((FastUser)null!);
 
-            var result = await authService.LoginUserAsync(userIdentifier, password, null, null);
+            var result = await authService.LoginUserAsync(userIdentifier, password);
 
             var failureResult = result.Should().BeOfType<FailureAuthResult<FastUser>>()
                 .Which;
@@ -117,7 +110,7 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.VerifyPassword(user, password)
                 .Returns(false);
 
-            var result = await authService.LoginUserAsync(user.Email!, password, null, null);
+            var result = await authService.LoginUserAsync(user.Email!, password);
 
             var failureResult = result.Should().BeOfType<FailureAuthResult<FastUser>>()
                 .Which;
@@ -161,7 +154,7 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.GetClaimsForUser(user)
                 .Returns(claims);
 
-            var result = await authService.LoginUserAsync(user.Email!, password, null, null);
+            var result = await authService.LoginUserAsync(user.Email!, password);
 
             assertResult(user, refreshToken, fastAuthOptions, securityKey, result);
 
@@ -178,7 +171,7 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.GetRefreshTokenByIdentifierAsync(refreshToken)
                 .Returns((null, null));
 
-            var result = await authService.RefreshAsync(refreshToken, null, null);
+            var result = await authService.RefreshAsync(refreshToken);
 
             var failureResult = result.Should().BeOfType<FailureAuthResult<FastUser>>()
                 .Which;
@@ -200,29 +193,7 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.IsRefreshTokenExpired(refreshToken)
                 .Returns(true);
 
-            var result = await authService.RefreshAsync(refreshToken.Id!, null, null);
-
-            var failureResult = result.Should().BeOfType<FailureAuthResult<FastUser>>()
-                .Which;
-
-            failureResult.Title.Should().NotBeNullOrWhiteSpace();
-            failureResult.Errors.Should().BeNull();
-        }
-
-        [Theory, MoreAutoData]
-        public async Task RefreshAsync_UsedRefreshToken_FailureAuthResult(
-            FastUser user,
-            FastRefreshToken refreshToken,
-            [Frozen] IFastUserStore<FastUser, FastRefreshToken> userStore,
-            FastAuthService<FastUser, FastRefreshToken> authService)
-        {
-            userStore.GetRefreshTokenByIdentifierAsync(refreshToken.Id!)
-                .Returns((refreshToken, user));
-
-            userStore.IsRefreshTokenUsed(refreshToken)
-                .Returns(true);
-
-            var result = await authService.RefreshAsync(refreshToken.Id!, null, null);
+            var result = await authService.RefreshAsync(refreshToken.Id!);
 
             var failureResult = result.Should().BeOfType<FailureAuthResult<FastUser>>()
                 .Which;
@@ -246,12 +217,6 @@ namespace FastJwtAuth.Core.Tests.Services
             SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
             SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-            var beforeRefreshGetCalled = false;
-            Action<FastUser> beforeRefresh = (user) =>
-            {
-                beforeRefreshGetCalled = true;
-            };
-
             userStore.GetRefreshTokenByIdentifierAsync(refreshToken.Id!)
                 .Returns((refreshToken, user));
 
@@ -268,13 +233,11 @@ namespace FastJwtAuth.Core.Tests.Services
             userStore.GetClaimsForUser(user)
                 .Returns(claims);
 
-            var result = await authService.RefreshAsync(refreshToken.Id!, signingCredentials, beforeRefresh);
+            var result = await authService.RefreshAsync(refreshToken.Id!, signingCredentials);
 
             assertResult(user, refreshToken, fastAuthOptions, securityKey, result);
 
-            beforeRefreshGetCalled.Should().BeTrue();
             await userStore.Received(1).MakeRefreshTokenUsedAsync(refreshToken);
-            await userStore.Received(1).UpdateUserAsync(user);
         }
 
         private static void assertResult(FastUser user, FastRefreshToken refreshToken, FastAuthOptions fastAuthOptions, SymmetricSecurityKey securityKey, IAuthResult<FastUser> result)

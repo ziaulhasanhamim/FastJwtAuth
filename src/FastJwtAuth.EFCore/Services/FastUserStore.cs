@@ -22,18 +22,13 @@ namespace FastJwtAuth.EFCore.Services
     {
         protected readonly TDbContext _dbContext;
 
-        public FastUserStore(TDbContext dbContext, FastAuthOptions authOptions)
-            : base(authOptions)
+        public FastUserStore(TDbContext dbContext, FastAuthOptions authOptions, IFastUserValidator<TUser>? userValidator = null)
+            : base(authOptions, userValidator)
         {
             _dbContext = dbContext;
         }
 
-        protected override object getDbAccessor()
-        {
-            return _dbContext;
-        }
-
-        public override Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default) => 
+        public override Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default) => 
             _dbContext.Set<TUser>()
                 .Where(user => user.NormalizedEmail == nomalizeduserIdentifier)
                 .AnyAsync(cancellationToken);
@@ -41,7 +36,7 @@ namespace FastJwtAuth.EFCore.Services
         public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)
         {
             var randomBytes = new byte[_authOptions.RefreshTokenBytesLength];
-            using var rng = new RNGCryptoServiceProvider();
+            using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomBytes);
 
             TRefreshToken refreshToken = new()
@@ -72,15 +67,10 @@ namespace FastJwtAuth.EFCore.Services
             return (refreshToken, refreshToken?.User);
         }
 
-        public override Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default) =>
+        public override Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default) =>
             _dbContext.Set<TUser>()
                 .Where(user => user.NormalizedEmail == normalizedUserIdentifier)
                 .FirstOrDefaultAsync(cancellationToken)!;
-
-        public override bool IsRefreshTokenUsed(TRefreshToken refreshTokenEntity)
-        {
-            return refreshTokenEntity is null;
-        }
 
         public override Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
         {

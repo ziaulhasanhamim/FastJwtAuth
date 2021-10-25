@@ -24,7 +24,7 @@ namespace FastJwtAuth
         /// <param name="password">Password to validate</param>
         /// <param name="cancellationToken">This can be used to cancel the operation</param>
         /// <returns>Dictionary of errors. Null if user is valid</returns>
-        Task<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
+        ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Set datetimes for the user which should be set at creation time
@@ -100,11 +100,6 @@ namespace FastJwtAuth
         /// <param name="cancellationToken">This can be used to cancel the operation</param>
         /// <returns>A tuple containing user and tuple</returns>
         Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
-        
-        /// <summary>
-        /// Check if Refresh token already used
-        /// </summary>
-        bool IsRefreshTokenUsed(TRefreshToken refreshTokenEntity);
 
         /// <summary>
         /// Get User from db by identifier. it will first normalize the identifier
@@ -118,7 +113,7 @@ namespace FastJwtAuth
         /// </summary>
         /// <param name="normalizedUserIdentifier">Identifier for user such as email or username</param>
         /// <returns>User Entity or null if not found</returns>
-        Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
+        Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Verify password with the user's password
@@ -141,7 +136,7 @@ namespace FastJwtAuth
         /// <summary>
         /// Check if user identifier exists. You have to provide normalized identifier
         /// </summary>
-        Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
+        Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
 
         string NormalizeUserIdentifier(string identifier);
     }

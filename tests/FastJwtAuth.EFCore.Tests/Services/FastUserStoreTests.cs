@@ -23,15 +23,16 @@ namespace FastJwtAuth.EFCore.Tests.Services
         {
             user.Email = "test";
             var password = "test";
-            authOptions.OnUserValidate = (_, _) =>
+            TestUserValidator userValidator = new(user => 
             {
-                return Task.FromResult(new Dictionary<string, List<string>>()
+                Dictionary<string, List<string>> errors = new()
                 {
                     ["TestField"] = new() { "Some Error" }
-                });
-            };
+                };
+                return (false, errors)!;
+            });
 
-            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(null!, authOptions);
+            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(null!, authOptions, userValidator);
 
             var result = await userStore.ValidateUserAsync(user, password);
 
@@ -49,20 +50,21 @@ namespace FastJwtAuth.EFCore.Tests.Services
         {
             user.Email = "test@test.com";
             var password = "test";
-            authOptions.OnUserValidate = (_, _) =>
+            TestUserValidator userValidator = new(user => 
             {
-                return Task.FromResult(new Dictionary<string, List<string>>()
+                Dictionary<string, List<string>> errors = new()
                 {
                     ["TestField"] = new() { "Some Error" }
-                });
-            };
+                };
+                return (false, errors)!;
+            });
 
             await using var dbContext = await TestDbContext.InitAsync();
 
             dbContext.Add(user);
             await dbContext.SaveChangesAsync();
 
-            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions);
+            FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions, userValidator);
 
             var result = await userStore.ValidateUserAsync(user, password);
 

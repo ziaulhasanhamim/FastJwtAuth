@@ -25,35 +25,50 @@ namespace FastJwtAuth.Core.Services
             _authOptions = authOptions;
         }
 
-        public async Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, SigningCredentials? signingCredentials, Action<TUser>? beforeCreate, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Validate User Entity
+        /// </summary>
+        /// <param name="user">User Entity to validate</param>
+        /// <param name="password">Password to validate</param>
+        /// <param name="cancellationToken">This can be used to cancel the operation</param>
+        /// <returns>Dictionary of errors. Null if user is valid</returns>
+        public ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+        {
+            return _userStore.ValidateUserAsync(user, password, cancellationToken);
+        }
+
+        public async Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, bool validateUser, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
         {
             _userStore.SetNormalizedFields(user);
-            var validation_errors = await _userStore.ValidateUserAsync(user, password, cancellationToken);
-            if (validation_errors is not null)
+
+            if (validateUser)
             {
-                return new FailureAuthResult<TUser>("Fix The specified errors", validation_errors);
+                var validation_errors = await ValidateUserAsync(user, password, cancellationToken);
+                if (validation_errors is not null)
+                {
+                    return new FailureAuthResult<TUser>("Fix The specified errors", validation_errors);
+                }
             }
 
             _userStore.SetPassword(user, password);
             _userStore.SetCreationDateTimes(user);
             _userStore.SetLoginDateTimes(user);
-            beforeCreate?.Invoke(user);
 
             await _userStore.CreateUserAsync(user, cancellationToken);
             return await generateTokens(user!, signingCredentials, cancellationToken);
         }
 
-        public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+        public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, bool validateUser, CancellationToken cancellationToken = default)
         {
-            return CreateUserAsync(user, password, null, null);
-        }
-        
-        public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
-        {
-            return CreateUserAsync(user, password, signingCredentials, null);
+            return CreateUserAsync(user, password, validateUser, null, cancellationToken);
         }
 
-        public async Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, SigningCredentials? signingCredentials, Action<TUser>? beforeLogin, CancellationToken cancellationToken = default)
+        public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+        {
+            return CreateUserAsync(user, password, true, cancellationToken);
+        }
+
+        public async Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
         {
             var user = await _userStore.GetUserByIdentifierAsync(userIdentifier, cancellationToken);
             if (user is null)
@@ -80,7 +95,6 @@ namespace FastJwtAuth.Core.Services
             }
 
             _userStore.SetLoginDateTimes(user);
-            beforeLogin?.Invoke(user);
             await _userStore.UpdateUserAsync(user, cancellationToken);
 
             return await generateTokens(user!, signingCredentials, cancellationToken);
@@ -88,15 +102,10 @@ namespace FastJwtAuth.Core.Services
 
         public Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, CancellationToken cancellationToken = default)
         {
-            return LoginUserAsync(userIdentifier, password, null, null, cancellationToken);
-        }
-        
-        public Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
-        {
-            return LoginUserAsync(userIdentifier, password, signingCredentials, null, cancellationToken);
+            return LoginUserAsync(userIdentifier, password, null, cancellationToken);
         }
 
-        public async Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, Action<TUser>? beforeRefresh, CancellationToken cancellationToken = default)
+        public async Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
         {
             if (!_authOptions.UseRefreshToken)
             {
@@ -111,15 +120,6 @@ namespace FastJwtAuth.Core.Services
             {
                 return new FailureAuthResult<TUser>("Refresh token is expired", null);
             }
-            if (_userStore.IsRefreshTokenUsed(refreshTokenEntity))
-            {
-                return new FailureAuthResult<TUser>("Refresh token is expired", null);
-            }
-            if (beforeRefresh is not null)
-            {
-                beforeRefresh(user!);
-                await _userStore.UpdateUserAsync(user!, cancellationToken);
-            }
             await _userStore.MakeRefreshTokenUsedAsync(refreshTokenEntity, cancellationToken);
             var succResult = await generateTokens(user!, signingCredentials, cancellationToken);
             return succResult;
@@ -127,12 +127,7 @@ namespace FastJwtAuth.Core.Services
 
         public Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
-            return RefreshAsync(refreshToken, null, null, cancellationToken);
-        }
-        
-        public Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
-        {
-            return RefreshAsync(refreshToken, signingCredentials, null, cancellationToken);
+            return RefreshAsync(refreshToken, null, cancellationToken);
         }
 
         private async Task<SuccessAuthResult<TUser>> generateTokens(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken)

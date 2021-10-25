@@ -28,6 +28,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
             {
                 throw new ObjectDisposedException("Already disposed provider");
             }
+            _isDisposed = true;
             await _mongoClient.DropDatabaseAsync(TestDatabase.DatabaseNamespace.DatabaseName);
         }
     }

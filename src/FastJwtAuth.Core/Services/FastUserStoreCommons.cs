@@ -15,13 +15,13 @@ namespace FastJwtAuth.Core.Services
         where TRefreshToken : class, IFastRefreshToken<TKey>
     {
         protected readonly FastAuthOptions _authOptions;
+        protected readonly IFastUserValidator<TUser>? _userValidator;
 
-        protected FastUserStoreCommons(FastAuthOptions authOptions)
+        protected FastUserStoreCommons(FastAuthOptions authOptions, IFastUserValidator<TUser>? userValidator)
         {
             _authOptions = authOptions;
+            _userValidator = userValidator;
         }
-
-        protected abstract object getDbAccessor();
 
         public virtual string NormalizeUserIdentifier(string identifier) => identifier.Normalize().ToUpperInvariant();
 
@@ -50,22 +50,20 @@ namespace FastJwtAuth.Core.Services
         public virtual Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default)
         {
             var normalizedUserIdentifier = NormalizeUserIdentifier(userIdentifier);
-            return GetUserByNormalizedIdentifier(normalizedUserIdentifier, cancellationToken);
+            return GetUserByNormalizedIdentifierAsync(normalizedUserIdentifier, cancellationToken);
         }
 
-        public abstract Task<TUser?> GetUserByNormalizedIdentifier(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
+        public abstract Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
 
         public virtual Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default)
         {
             var nomalizeduserIdentifier = NormalizeUserIdentifier(userIdentifier);
-            return DoesNormalizedUserIdentifierExist(nomalizeduserIdentifier, cancellationToken);
+            return DoesNormalizedUserIdentifierExistAsync(nomalizeduserIdentifier, cancellationToken);
         }
 
-        public abstract Task<bool> DoesNormalizedUserIdentifierExist(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
+        public abstract Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
 
         public virtual bool IsRefreshTokenExpired(TRefreshToken refreshTokenEntity) => refreshTokenEntity.ExpiresAt < DateTime.UtcNow;
-
-        public abstract bool IsRefreshTokenUsed(TRefreshToken refreshTokenEntity);
 
         public abstract Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
 
@@ -82,14 +80,18 @@ namespace FastJwtAuth.Core.Services
 
         public abstract Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
-        public virtual async Task<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+        public virtual async ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
         {
             Dictionary<string, List<string>>? errors = null;
-            if (_authOptions.OnUserValidate is not null)
+            bool complete = false;
+            if (_userValidator is not null)
             {
-                errors = await _authOptions.OnUserValidate(user, getDbAccessor());
+                (complete, errors) = await _userValidator.ValidateAsync(user);
             }
-
+            if (complete)
+            {
+                return errors;
+            }
             var emailValidator = new EmailAddressAttribute();
             var emailValid = emailValidator.IsValid(user.Email);
             if (!emailValid)
@@ -118,7 +120,7 @@ namespace FastJwtAuth.Core.Services
             }
             if (errors is null || !errors.ContainsKey(nameof(IFastUser<Guid>.Email)))
             {
-                var emailExists = await DoesNormalizedUserIdentifierExist(user.NormalizedEmail!, cancellationToken);
+                var emailExists = await DoesNormalizedUserIdentifierExistAsync(user.NormalizedEmail!, cancellationToken);
                 if (emailExists)
                 {
                     if (errors is null)

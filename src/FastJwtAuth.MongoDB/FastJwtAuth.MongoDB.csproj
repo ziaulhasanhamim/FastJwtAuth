@@ -1,11 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
+		<TargetFrameworks>net5.0;net6.0</TargetFrameworks>
+		<LangVersion>10.0</LangVersion>
 		<Nullable>enable</Nullable>
 		<PackageId>FastJwtAuth.MongoDB</PackageId>
 		<Title>FastJwtAuth Using MongoDB</Title>
-		<Version>0.2.3</Version>
+		<Version>0.2.4</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
 		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token using MongoDB</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -13,6 +14,7 @@
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<RepositoryUrl>https://github.com/ziaulhasanhamim/FastJwtAuth</RepositoryUrl>
 		<PackageIcon>icon.jpg</PackageIcon>
+		<PackageReleaseNotes>Fix some bugs</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<NoWarn>1591;1573</NoWarn>
