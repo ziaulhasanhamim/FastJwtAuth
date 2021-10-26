@@ -2,7 +2,6 @@
 using FastJwtAuth.EFCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.JsonWebTokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,87 +1,73 @@
-﻿using FastJwtAuth.Core.Entities;
-using FastJwtAuth.Core.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.JsonWebTokens;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Security.Claims;
+﻿namespace FastJwtAuth.EFCore.Services;
+
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace FastJwtAuth.EFCore.Services
+public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, TUserKey>
+    where TUser : FastUser<TUserKey>, new()
+    where TRefreshToken : FastRefreshToken<TUser, TUserKey>, new()
+    where TDbContext : DbContext
 {
-    public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, TUserKey>
-        where TUser : FastUser<TUserKey>, new()
-        where TRefreshToken : FastRefreshToken<TUser, TUserKey>, new()
-        where TDbContext : DbContext
+    protected readonly TDbContext _dbContext;
+
+    public FastUserStore(TDbContext dbContext, FastAuthOptions authOptions, IFastUserValidator<TUser>? userValidator = null)
+        : base(authOptions, userValidator)
     {
-        protected readonly TDbContext _dbContext;
+        _dbContext = dbContext;
+    }
 
-        public FastUserStore(TDbContext dbContext, FastAuthOptions authOptions, IFastUserValidator<TUser>? userValidator = null)
-            : base(authOptions, userValidator)
+    public override Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default) =>
+        _dbContext.Set<TUser>()
+            .Where(user => user.NormalizedEmail == nomalizeduserIdentifier)
+            .AnyAsync(cancellationToken);
+
+    public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)
+    {
+        var randomBytes = new byte[_authOptions.RefreshTokenBytesLength];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
+
+        TRefreshToken refreshToken = new()
         {
-            _dbContext = dbContext;
-        }
+            Id = Convert.ToBase64String(randomBytes),
+            ExpiresAt = DateTime.UtcNow.Add(_authOptions.RefreshTokenLifeSpan),
+            UserId = user!.Id
+        };
 
-        public override Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default) => 
-            _dbContext.Set<TUser>()
-                .Where(user => user.NormalizedEmail == nomalizeduserIdentifier)
-                .AnyAsync(cancellationToken);
+        await _dbContext.AddAsync(refreshToken, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)
-        {
-            var randomBytes = new byte[_authOptions.RefreshTokenBytesLength];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomBytes);
+        return refreshToken;
+    }
 
-            TRefreshToken refreshToken = new()
-            {
-                Id = Convert.ToBase64String(randomBytes),
-                ExpiresAt = DateTime.UtcNow.Add(_authOptions.RefreshTokenLifeSpan),
-                UserId = user!.Id
-            };
+    public override async Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.AddAsync(user, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
 
-            await _dbContext.AddAsync(refreshToken, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default)
+    {
+        var refreshToken = await _dbContext.Set<TRefreshToken>()
+            .Where(token => token.Id == refreshTokenIdentifier)
+            .Include(token => token.User)
+            .FirstOrDefaultAsync(cancellationToken);
+        return (refreshToken, refreshToken?.User);
+    }
 
-            return refreshToken;
-        }
+    public override Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default) =>
+        _dbContext.Set<TUser>()
+            .Where(user => user.NormalizedEmail == normalizedUserIdentifier)
+            .FirstOrDefaultAsync(cancellationToken)!;
 
-        public override async Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default)
-        {
-            await _dbContext.AddAsync(user, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
+    public override Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Remove(refreshTokenEntity);
+        return _dbContext.SaveChangesAsync(cancellationToken);
+    }
 
-        public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default)
-        {
-            var refreshToken = await _dbContext.Set<TRefreshToken>()
-                .Where(token => token.Id == refreshTokenIdentifier)
-                .Include(token => token.User)
-                .FirstOrDefaultAsync(cancellationToken);
-            return (refreshToken, refreshToken?.User);
-        }
-
-        public override Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default) =>
-            _dbContext.Set<TUser>()
-                .Where(user => user.NormalizedEmail == normalizedUserIdentifier)
-                .FirstOrDefaultAsync(cancellationToken)!;
-
-        public override Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
-        {
-            _dbContext.Remove(refreshTokenEntity);
-            return _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        public override Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default)
-        {
-            _dbContext.Update(user);
-            return _dbContext.SaveChangesAsync(cancellationToken);
-        }
+    public override Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Update(user);
+        return _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

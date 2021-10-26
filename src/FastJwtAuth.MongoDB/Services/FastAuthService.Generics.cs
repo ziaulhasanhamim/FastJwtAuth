@@ -1,23 +1,18 @@
-﻿using FastJwtAuth.Core.Services;
-using System;
+﻿namespace FastJwtAuth.MongoDB.Services;
 
-namespace FastJwtAuth.MongoDB.Services
+public class FastAuthService<TUser> : FastAuthService<TUser, FastRefreshToken<TUser>>, IFastAuthService<TUser>
+    where TUser : FastUser, new()
 {
-
-    public class FastAuthService<TUser> : FastAuthService<TUser, FastRefreshToken<TUser>>, IFastAuthService<TUser>
-        where TUser : FastUser, new()
+    public FastAuthService(IFastUserStore<TUser, FastRefreshToken<TUser>> userStore, FastAuthOptions authOptions)
+        : base(userStore, authOptions)
     {
-        public FastAuthService(IFastUserStore<TUser, FastRefreshToken<TUser>> userStore, FastAuthOptions authOptions)
-            : base(userStore, authOptions)
-        {
-        }
     }
+}
 
-    public class FastAuthService : FastAuthService<FastUser, FastRefreshToken>, IFastAuthService
+public class FastAuthService : FastAuthService<FastUser, FastRefreshToken>, IFastAuthService
+{
+    public FastAuthService(IFastUserStore<FastUser, FastRefreshToken> userStore, FastAuthOptions authOptions)
+        : base(userStore, authOptions)
     {
-        public FastAuthService(IFastUserStore<FastUser, FastRefreshToken> userStore, FastAuthOptions authOptions)
-            : base(userStore, authOptions)
-        {
-        }
     }
 }
