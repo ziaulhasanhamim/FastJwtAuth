@@ -23,7 +23,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
         {
             user.Email = "test";
             var password = "test";
-            TestUserValidator userValidator = new(user => 
+            TestUserValidator userValidator = new((_, _) => 
             {
                 Dictionary<string, List<string>> errors = new()
                 {
@@ -53,7 +53,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
             user.Email = "test@test.com";
             user.Id = null;
             var password = "test";
-            TestUserValidator userValidator = new(user => 
+            TestUserValidator userValidator = new((_, _) => 
             {
                 Dictionary<string, List<string>> errors = new()
                 {
@@ -82,11 +82,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
         [Theory, MoreAutoData]
         public async Task ValidateUserAsync_AllOkay_NullReturned(MongoFastAuthOptions authOptions)
         {
-            FastUser user = new()
-            {
-                Email = "test@test.com",
-                NormalizedEmail = "test@test.com"
-            };
+            FastUser user = new() { Email = "test@test.com", NormalizedEmail = "TEST@TEST.COM" };
             var password = "test1234";
 
             await using MongoDBProvider dbProvider = new();

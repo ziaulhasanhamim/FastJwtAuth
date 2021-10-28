@@ -78,27 +78,33 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TKey> : IFastUs
         bool complete = false;
         if (_userValidator is not null)
         {
-            (complete, errors) = await _userValidator.ValidateAsync(user);
+            (complete, errors) = await _userValidator.ValidateAsync(user, password);
         }
         if (complete)
         {
             return errors;
         }
+        if (user.Email is null || user.NormalizedEmail is null)
+        {
+            errors ??= new();
+            if (errors.TryGetValue(nameof(IFastUser<Guid>.Email), out var emailErrors))
+            {
+                emailErrors.Add("Email is required for creating a new user");
+            }
+            errors[nameof(IFastUser<Guid>.Email)] = new() { "Email is required for creating a new user" };
+        }
         var emailValidator = new EmailAddressAttribute();
         var emailValid = emailValidator.IsValid(user.Email);
-        if (!emailValid)
+        if (!emailValid &&  user.Email is not null)
         {
-            if (errors is null)
-            {
-                errors = new();
-            }
+            errors ??= new();
             if (errors.TryGetValue(nameof(IFastUser<Guid>.Email), out var emailErrors))
             {
                 emailErrors.Add("Provided email is not valid");
             }
             errors[nameof(IFastUser<Guid>.Email)] = new() { "Provided email is not valid" };
         }
-        if (password.Length < 8)
+        if (password?.Length < 8)
         {
             if (errors is null)
             {

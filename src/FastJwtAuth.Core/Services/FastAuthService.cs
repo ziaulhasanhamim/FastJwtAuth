@@ -18,13 +18,12 @@ public class FastAuthService<TUser, TRefreshToken> : IFastAuthService<TUser, TRe
 
     public ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
     {
+        _userStore.SetNormalizedFields(user);
         return _userStore.ValidateUserAsync(user, password, cancellationToken);
     }
 
     public async Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, bool validateUser, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
     {
-        _userStore.SetNormalizedFields(user);
-
         if (validateUser)
         {
             var validation_errors = await ValidateUserAsync(user, password, cancellationToken);

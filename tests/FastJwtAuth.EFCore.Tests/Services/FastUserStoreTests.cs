@@ -23,7 +23,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
         {
             user.Email = "test";
             var password = "test";
-            TestUserValidator userValidator = new(user => 
+            TestUserValidator userValidator = new((_,_) => 
             {
                 Dictionary<string, List<string>> errors = new()
                 {
@@ -50,7 +50,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
         {
             user.Email = "test@test.com";
             var password = "test";
-            TestUserValidator userValidator = new(user => 
+            TestUserValidator userValidator = new((_,_) => 
             {
                 Dictionary<string, List<string>> errors = new()
                 {
@@ -78,7 +78,7 @@ namespace FastJwtAuth.EFCore.Tests.Services
         [Fact]
         public async Task ValidateUserAsync_AllOkay_NullReturned()
         {
-            FastUser user = new() { Email = "test@test.com" };
+            FastUser user = new() { Email = "test@test.com", NormalizedEmail = "TEST@TEST.COM" };
             var password = "test1234";
 
             await using var dbContext = await TestDbContext.InitAsync();

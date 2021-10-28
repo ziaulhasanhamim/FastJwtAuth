@@ -74,7 +74,7 @@ public static class Extensions
         Type implmentationType = typeof(MongoStartupService<,>)
                             .MakeGenericType(builder.UserType!, builder.RefreshTokenType!);
         builder.Services!
-            .TryAddEnumerable(new ServiceDescriptor(typeof(IHostedService), implmentationType));
+            .TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IHostedService), implmentationType));
 
         return builder;
     }
