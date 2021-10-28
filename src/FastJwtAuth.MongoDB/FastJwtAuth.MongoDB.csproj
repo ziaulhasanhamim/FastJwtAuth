@@ -6,7 +6,7 @@
 		<Nullable>enable</Nullable>
 		<PackageId>FastJwtAuth.MongoDB</PackageId>
 		<Title>FastJwtAuth Using MongoDB</Title>
-		<Version>0.2.5</Version>
+		<Version>0.2.6</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
 		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token using MongoDB</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
