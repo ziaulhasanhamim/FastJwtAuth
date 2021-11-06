@@ -7,17 +7,19 @@ public class MongoStartupService<TUser, TRefreshToken> : IHostedService
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
 {
-    private readonly IMongoDatabase _db;
+    private IMongoCollection<TUser> _usersCollection;
 
     public MongoStartupService(MongoFastAuthOptions authOptions, IServiceProvider sp)
     {
+        IMongoDatabase db;
         if (authOptions.MongoDatabaseGetter is not null)
         {
-            _db = authOptions.MongoDatabaseGetter(sp);
-            if (_db is null)
+            db = authOptions.MongoDatabaseGetter(sp);
+            if (db is null)
             {
                 throw new NullReferenceException($"{nameof(MongoFastAuthOptions.MongoDatabaseGetter)} should not return null");
             }
+            _usersCollection = db.GetCollection<TUser>(authOptions.UsersCollectionName);
             return;
         }
         if (authOptions.MongoDbName is null)
@@ -29,12 +31,14 @@ public class MongoStartupService<TUser, TRefreshToken> : IHostedService
         {
             throw new NullReferenceException($"{nameof(IMongoClient)} service is not added as service");
         }
-        _db = mongoClient.GetDatabase(authOptions.MongoDbName);
+        db = mongoClient.GetDatabase(authOptions.MongoDbName);
+        _usersCollection = db.GetCollection<TUser>(authOptions.UsersCollectionName);
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        return _db.CreateFastAuthDBIndexes<TUser>();
+        await _usersCollection.CreateFastUserIndexes();
+        _usersCollection = null!;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

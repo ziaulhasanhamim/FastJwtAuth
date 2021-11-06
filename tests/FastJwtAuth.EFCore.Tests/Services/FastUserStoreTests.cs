@@ -23,13 +23,9 @@ namespace FastJwtAuth.EFCore.Tests.Services
         {
             user.Email = "test";
             var password = "test";
-            TestUserValidator userValidator = new((_,_) => 
+            TestUserValidator userValidator = new((_, _) =>
             {
-                Dictionary<string, List<string>> errors = new()
-                {
-                    ["TestField"] = new() { "Some Error" }
-                };
-                return (false, errors)!;
+                return (false, new() { (AuthErrorType)10 });
             });
 
             FastUserStore<FastUser, Guid, FastRefreshToken, DbContext> userStore = new(null!, authOptions, userValidator);
@@ -38,11 +34,11 @@ namespace FastJwtAuth.EFCore.Tests.Services
 
             result.Should().NotBeNull();
             result.Should().HaveCount(3);
-            result!.ContainsKey(nameof(FastUser.Email)).Should().BeTrue();
-            result!.ContainsKey("Password").Should().BeTrue();
-            result!.ContainsKey("TestField").Should().BeTrue();
+            result.Should().Contain(AuthErrorType.InvalidEmailFormat);
+            result.Should().Contain(AuthErrorType.PasswordVeryShort);
+            result.Should().Contain((AuthErrorType)10);
         }
-        
+
         [Theory, MoreAutoData]
         public async Task ValidateUserAsync_DuplicateEmailAndPassword_CustomErrors_ErrorsReturned(
             FastUser user,
@@ -50,13 +46,9 @@ namespace FastJwtAuth.EFCore.Tests.Services
         {
             user.Email = "test@test.com";
             var password = "test";
-            TestUserValidator userValidator = new((_,_) => 
+            TestUserValidator userValidator = new((_, _) =>
             {
-                Dictionary<string, List<string>> errors = new()
-                {
-                    ["TestField"] = new() { "Some Error" }
-                };
-                return (false, errors)!;
+                return (false, new() { (AuthErrorType)10 });
             });
 
             await using var dbContext = await TestDbContext.InitAsync();
@@ -70,9 +62,9 @@ namespace FastJwtAuth.EFCore.Tests.Services
 
             result.Should().NotBeNull();
             result.Should().HaveCount(3);
-            result!.ContainsKey(nameof(FastUser.Email)).Should().BeTrue();
-            result!.ContainsKey("Password").Should().BeTrue();
-            result!.ContainsKey("TestField").Should().BeTrue();
+            result.Should().Contain(AuthErrorType.DuplicateEmail);
+            result.Should().Contain(AuthErrorType.PasswordVeryShort);
+            result.Should().Contain((AuthErrorType)10);
         }
 
         [Fact]

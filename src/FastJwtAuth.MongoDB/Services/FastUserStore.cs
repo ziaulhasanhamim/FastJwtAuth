@@ -61,27 +61,27 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
     public override Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default) =>
         _usersCollection.InsertOneAsync(user, null, cancellationToken);
 
-    public override Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default)
+    public override Task<bool> DoesNormalizedEmailExistAsync(string nomalizedEmail, CancellationToken cancellationToken = default)
     {
         var filter = new BsonDocument()
         {
-            [nameof(FastUser.NormalizedEmail)] = nomalizeduserIdentifier
+            [nameof(FastUser.NormalizedEmail)] = nomalizedEmail
         };
         return _usersCollection.Find(filter).AnyAsync(cancellationToken);
     }
 
-    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default)
+    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         var filter = new BsonDocument()
         {
-            [nameof(FastRefreshToken.Id)] = refreshTokenIdentifier
+            ["_id"] = id
         };
         var refreshToken = await _refreshTokenCollection.Find(filter)
             .FirstOrDefaultAsync(cancellationToken);
         return (refreshToken, refreshToken?.User);
     }
 
-    public override Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default)
+    public override Task<TUser?> GetUserByNormalizedEmailAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default)
     {
         var filter = new BsonDocument()
         {
@@ -90,7 +90,7 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
         return _usersCollection.Find(filter).FirstOrDefaultAsync(cancellationToken)!;
     }
 
-    public override Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
+    public override Task RemoveRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
     {
         var filter = new BsonDocument()
         {

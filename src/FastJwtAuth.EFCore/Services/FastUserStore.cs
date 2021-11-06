@@ -15,9 +15,9 @@ public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUse
         _dbContext = dbContext;
     }
 
-    public override Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default) =>
+    public override Task<bool> DoesNormalizedEmailExistAsync(string nomalizedEmail, CancellationToken cancellationToken = default) =>
         _dbContext.Set<TUser>()
-            .Where(user => user.NormalizedEmail == nomalizeduserIdentifier)
+            .Where(user => user.NormalizedEmail == nomalizedEmail)
             .AnyAsync(cancellationToken);
 
     public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)
@@ -45,21 +45,21 @@ public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUse
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default)
+    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         var refreshToken = await _dbContext.Set<TRefreshToken>()
-            .Where(token => token.Id == refreshTokenIdentifier)
+            .Where(token => token.Id == id)
             .Include(token => token.User)
             .FirstOrDefaultAsync(cancellationToken);
         return (refreshToken, refreshToken?.User);
     }
 
-    public override Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default) =>
+    public override Task<TUser?> GetUserByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
         _dbContext.Set<TUser>()
-            .Where(user => user.NormalizedEmail == normalizedUserIdentifier)
+            .Where(user => user.NormalizedEmail == normalizedEmail)
             .FirstOrDefaultAsync(cancellationToken)!;
 
-    public override Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
+    public override Task RemoveRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
     {
         _dbContext.Remove(refreshTokenEntity);
         return _dbContext.SaveChangesAsync(cancellationToken);

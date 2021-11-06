@@ -6,10 +6,9 @@ using Microsoft.Extensions.Hosting;
 
 public static class Extensions
 {
-    public static Task CreateFastAuthDBIndexes<TUser>(this IMongoDatabase db, CancellationToken cancellationToken = default)
+    public static Task CreateFastUserIndexes<TUser>(this IMongoCollection<TUser> usersCollection, CancellationToken cancellationToken = default)
         where TUser : FastUser, new()
     {
-        var usersCollection = db.GetCollection<TUser>("FastUsers");
         var indexKeysDefinition = Builders<TUser>.IndexKeys.Ascending(user => user.NormalizedEmail);
         return usersCollection.Indexes.CreateOneAsync(
             new CreateIndexModel<TUser>(indexKeysDefinition),
@@ -17,9 +16,9 @@ public static class Extensions
             cancellationToken);
     }
 
-    public static Task CreateFastAuthDBIndexes(this IMongoDatabase db, CancellationToken cancellationToken = default)
+    public static Task CreateFastUserIndexes(this IMongoCollection<FastUser> usersCollection, CancellationToken cancellationToken = default)
     {
-        return CreateFastAuthDBIndexes<FastUser>(db, cancellationToken);
+        return CreateFastUserIndexes<FastUser>(usersCollection, cancellationToken);
     }
 
     public static MongoFastAuthBuilder AddFastAuthWithMongo<TUser>(this IServiceCollection services, Action<MongoFastAuthOptions> optionAction)
@@ -28,14 +27,18 @@ public static class Extensions
         MongoFastAuthOptions authOptions = new();
         optionAction(authOptions);
         services.AddSingleton(authOptions);
+        services.AddSingleton<FastAuthOptions>(authOptions);
 
         services.AddScoped<
-            IFastUserStore<TUser, FastRefreshToken<TUser>>,
+            IFastUserStore<TUser, FastRefreshToken<TUser>, string>,
             FastUserStore<TUser, FastRefreshToken<TUser>>>();
-
+        
         services.AddScoped<
-            IFastAuthService<TUser, FastRefreshToken<TUser>>,
-            FastAuthService<TUser, FastRefreshToken<TUser>>>();
+            IFastAuthService<TUser>,
+            FastAuthService<TUser>>();
+
+        services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>, string>>(
+            sp => sp.GetService<IFastAuthService<TUser>>()!);
 
         return new()
         {
@@ -51,14 +54,15 @@ public static class Extensions
         MongoFastAuthOptions authOptions = new();
         optionAction(authOptions);
         services.AddSingleton(authOptions);
+        services.AddSingleton<FastAuthOptions>(authOptions);
 
         services.AddScoped<
-            IFastUserStore<FastUser, FastRefreshToken>,
+            IFastUserStore<FastUser, FastRefreshToken, string>,
             FastUserStore<FastUser, FastRefreshToken>>();
 
         services.AddScoped<IFastAuthService, FastAuthService>();
 
-        services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(sp => sp.GetService<IFastAuthService>()!);
+        services.AddScoped<IFastAuthService<FastUser, FastRefreshToken, string>>(sp => sp.GetService<IFastAuthService>()!);
 
         return new()
         {

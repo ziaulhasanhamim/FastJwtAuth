@@ -8,9 +8,10 @@ using Microsoft.IdentityModel.Tokens;
 /// </summary>
 /// <typeparam name="TUser">Type of User Entity</typeparam>
 /// <typeparam name="TRefreshToken">Type of RefreshToken Entity</typeparam>
-public interface IFastAuthService<TUser, TRefreshToken>
-    where TUser : class
-    where TRefreshToken : class
+/// <typeparam name="TUserKey">Type of User Key</typeparam>
+public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
+    where TUser : class, IFastUser<TUserKey>, new()
+    where TRefreshToken : class, IFastRefreshToken<TUserKey>, new()
 {
     /// <summary>
     /// Creates a new User
@@ -45,21 +46,21 @@ public interface IFastAuthService<TUser, TRefreshToken>
     /// <summary>
     /// Login an user
     /// </summary>
-    /// <param name="userIdentifier">Identifier for user such as email or username</param>
-    /// <param name="password">Password for the user</param>
+    /// <param name="email">Email of user</param>
+    /// <param name="password">Password of the user</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="SuccessAuthResult{TUser}"/> if login was successful else returns <see cref="FailureAuthResult{TUser}"/></returns>
-    Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, CancellationToken cancellationToken = default);
+    Task<IAuthResult<TUser>> LoginUserAsync(string email, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Login an user
     /// </summary>
-    /// <param name="userIdentifier">Identifier for user such as email or username</param>
-    /// <param name="password">Password for the user</param>
+    /// <param name="email">Email of user</param>
+    /// <param name="password">Password of user</param>
     /// <param name="signingCredentials">SigningCredentials for jwt signing it will be used. If none default one will be used from FastAuthOptions</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="SuccessAuthResult{TUser}"/> if login was successful else returns <see cref="FailureAuthResult{TUser}"/></returns>
-    Task<IAuthResult<TUser>> LoginUserAsync(string userIdentifier, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default);
+    Task<IAuthResult<TUser>> LoginUserAsync(string email, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Refresh and gets new a refresh token and access token
@@ -85,5 +86,5 @@ public interface IFastAuthService<TUser, TRefreshToken>
     /// <param name="password">Password to validate</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns>Dictionary of errors. Null if user is valid</returns>
-    ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
+    ValueTask<List<AuthErrorType>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
 }

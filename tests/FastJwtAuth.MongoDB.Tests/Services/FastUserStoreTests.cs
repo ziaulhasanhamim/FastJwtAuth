@@ -25,11 +25,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
             var password = "test";
             TestUserValidator userValidator = new((_, _) => 
             {
-                Dictionary<string, List<string>> errors = new()
-                {
-                    ["TestField"] = new() { "Some Error" }
-                };
-                return (false, errors)!;
+                return (false, new() { (AuthErrorType)10 });
             });
 
             authOptions.MongoDatabaseGetter = _ => Substitute.For<IMongoDatabase>();
@@ -40,9 +36,9 @@ namespace FastJwtAuth.MongoDB.Tests.Services
 
             result.Should().NotBeNull();
             result.Should().HaveCount(3);
-            result!.ContainsKey(nameof(FastUser.Email)).Should().BeTrue();
-            result!.ContainsKey("Password").Should().BeTrue();
-            result!.ContainsKey("TestField").Should().BeTrue();
+            result.Should().Contain(AuthErrorType.InvalidEmailFormat);
+            result.Should().Contain(AuthErrorType.PasswordVeryShort);
+            result.Should().Contain((AuthErrorType)10);
         }
 
         [Theory, MoreAutoData]
@@ -55,11 +51,7 @@ namespace FastJwtAuth.MongoDB.Tests.Services
             var password = "test";
             TestUserValidator userValidator = new((_, _) => 
             {
-                Dictionary<string, List<string>> errors = new()
-                {
-                    ["TestField"] = new() { "Some Error" }
-                };
-                return (false, errors)!;
+                return (false, new() { (AuthErrorType)10 });
             });
 
             await using MongoDBProvider dbProvider = new();
@@ -74,9 +66,9 @@ namespace FastJwtAuth.MongoDB.Tests.Services
 
             result.Should().NotBeNull();
             result.Should().HaveCount(3);
-            result!.ContainsKey(nameof(FastUser.Email)).Should().BeTrue();
-            result!.ContainsKey("Password").Should().BeTrue();
-            result!.ContainsKey("TestField").Should().BeTrue();
+            result.Should().Contain(AuthErrorType.DuplicateEmail);
+            result.Should().Contain(AuthErrorType.PasswordVeryShort);
+            result.Should().Contain((AuthErrorType)10);
         }
 
         [Theory, MoreAutoData]

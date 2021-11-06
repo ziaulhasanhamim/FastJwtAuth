@@ -5,9 +5,10 @@
 /// </summary>
 /// <typeparam name="TUser">Type of User Entity</typeparam>
 /// <typeparam name="TRefreshToken">Type of RefreshToken Entity</typeparam>
-public interface IFastUserStore<TUser, TRefreshToken>
-    where TUser : class
-    where TRefreshToken : class
+/// <typeparam name="TUserKey">Type of User Key</typeparam>
+public interface IFastUserStore<TUser, TRefreshToken, TUserKey>
+    where TUser : class, IFastUser<TUserKey>, new()
+    where TRefreshToken : class, IFastRefreshToken<TUserKey>, new()
 {
     /// <summary>
     /// Validate User Entity
@@ -15,23 +16,8 @@ public interface IFastUserStore<TUser, TRefreshToken>
     /// <param name="user">User Entity to validate</param>
     /// <param name="password">Password to validate</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
-    /// <returns>Dictionary of errors. Null if user is valid</returns>
-    ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Set datetimes for the user which should be set at creation time
-    /// </summary>
-    void SetCreationDateTimes(TUser user);
-
-    /// <summary>
-    /// Set datetimes for the user which should be set at creation time
-    /// </summary>
-    void SetLoginDateTimes(TUser user);
-
-    /// <summary>
-    /// Set the normalized fields like email and username
-    /// </summary>
-    void SetNormalizedFields(TUser user);
+    /// <returns>List of errors. Null if user is valid</returns>
+    ValueTask<List<AuthErrorType>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Add User To Database
@@ -39,20 +25,6 @@ public interface IFastUserStore<TUser, TRefreshToken>
     /// <param name="user">User entity</param>
     /// <param name="cancellationToken"></param>
     Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets ExpireDate for RefreshToken
-    /// </summary>
-    /// <param name="refreshTokenEntity">RefreshToken entity</param>
-    /// <returns>ExpireDate for RefreshToken</returns>
-    DateTime GetRefreshTokenExpireDate(TRefreshToken refreshTokenEntity);
-
-    /// <summary>
-    /// Gets Identifier for RefreshToken. Identifier can be an Id or something that uniquely identifies the RefreshToken
-    /// </summary>
-    /// <param name="refreshTokenEntity">RefreshToken entity</param>
-    /// <returns>RefreshToken identifier</returns>
-    string GetRefreshTokenIdentifier(TRefreshToken refreshTokenEntity);
 
     /// <summary>
     /// Create RefreshToken
@@ -81,31 +53,26 @@ public interface IFastUserStore<TUser, TRefreshToken>
     Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if Refresh token expired
-    /// </summary>
-    bool IsRefreshTokenExpired(TRefreshToken refreshTokenEntity);
-
-    /// <summary>
     /// Gets referesh token and user by identifier 
     /// </summary>
-    /// <param name="refreshTokenIdentifier">Referesh token identifier</param>
+    /// <param name="id">Referesh token identifier</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns>A tuple containing user and tuple</returns>
-    Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
+    Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get User from db by identifier. it will first normalize the identifier
     /// </summary>
-    /// <param name="userIdentifier">Identifier for user such as email or username</param>
+    /// <param name="email">Identifier for user such as email or username</param>
     /// <returns>User Entity or null if not found</returns>
-    Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default);
+    Task<TUser?> GetUserByEmailAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get User from db by normalized identifier. You have to provide normalized identifier
     /// </summary>
-    /// <param name="normalizedUserIdentifier">Identifier for user such as email or username</param>
+    /// <param name="normalizedEmail">Identifier for user such as email or username</param>
     /// <returns>User Entity or null if not found</returns>
-    Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
+    Task<TUser?> GetUserByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Verify password with the user's password
@@ -118,17 +85,17 @@ public interface IFastUserStore<TUser, TRefreshToken>
     /// <summary>
     /// Make the refresh token used. so that it cant be used anymore
     /// </summary>
-    Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
+    Task RemoveRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if user identifier exists. it will first normalize identifier
+    /// Check if emnail exists. it will first normalize identifier
     /// </summary>
-    Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default);
+    Task<bool> DoesEmailExist(string email, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if user identifier exists. You have to provide normalized identifier
+    /// Check if emnail exists. You have to provide normalized identifier
     /// </summary>
-    Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
+    Task<bool> DoesNormalizedEmailExistAsync(string normalizedEmail, CancellationToken cancellationToken = default);
 
-    string NormalizeUserIdentifier(string identifier);
+    string NormalizeEmail(string email);
 }

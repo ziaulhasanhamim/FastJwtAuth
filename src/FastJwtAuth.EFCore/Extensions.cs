@@ -53,12 +53,15 @@ namespace FastJwtAuth.EFCore
             services.AddSingleton(authOptions);
 
             services.AddScoped<
-                IFastUserStore<TUser, FastRefreshToken<TUser, TUserKey>>,
+                IFastUserStore<TUser, FastRefreshToken<TUser, TUserKey>, TUserKey>,
                 FastUserStore<TUser, TUserKey, FastRefreshToken<TUser, TUserKey>, TDbContext>>();
 
             services.AddScoped<
-                IFastAuthService<TUser, FastRefreshToken<TUser, TUserKey>>,
-                FastAuthService<TUser, FastRefreshToken<TUser, TUserKey>>>();
+                IFastAuthService<TUser, TUserKey>,
+                FastAuthService<TUser, TUserKey>>();
+
+            services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser, TUserKey>, TUserKey>>(
+                sp => sp.GetService<IFastAuthService<TUser, TUserKey>>()!);
         }
 
         public static void AddFastAuthWithEFCore<TUser, TDbContext>(this IServiceCollection services, Action<FastAuthOptions> optionAction)
@@ -70,14 +73,14 @@ namespace FastJwtAuth.EFCore
             services.AddSingleton(authOptions);
 
             services.AddScoped<
-                IFastUserStore<TUser, FastRefreshToken<TUser>>,
+                IFastUserStore<TUser, FastRefreshToken<TUser>, Guid>,
                 FastUserStore<TUser, Guid, FastRefreshToken<TUser>, TDbContext>>();
 
             services.AddScoped<
                 IFastAuthService<TUser>,
                 FastAuthService<TUser>>();
 
-            services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>>>(sp => sp.GetService<IFastAuthService<TUser>>()!);
+            services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>, Guid>>(sp => sp.GetService<IFastAuthService<TUser>>()!);
         }
 
         public static void AddFastAuthWithEFCore<TDbContext>(this IServiceCollection services, Action<FastAuthOptions> optionAction)
@@ -88,12 +91,12 @@ namespace FastJwtAuth.EFCore
             services.AddSingleton(authOptions);
 
             services.AddScoped<
-                IFastUserStore<FastUser, FastRefreshToken>,
+                IFastUserStore<FastUser, FastRefreshToken, Guid>,
                 FastUserStore<FastUser, Guid, FastRefreshToken, TDbContext>>();
 
             services.AddScoped<IFastAuthService, FastAuthService>();
 
-            services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(sp => sp.GetService<IFastAuthService>()!);
+            services.AddScoped<IFastAuthService<FastUser, FastRefreshToken, Guid>>(sp => sp.GetService<IFastAuthService>()!);
         }
 
 

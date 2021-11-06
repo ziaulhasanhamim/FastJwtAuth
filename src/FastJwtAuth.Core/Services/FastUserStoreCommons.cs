@@ -2,9 +2,9 @@
 
 using System.IdentityModel.Tokens.Jwt;
 
-public abstract class FastUserStoreCommons<TUser, TRefreshToken, TKey> : IFastUserStore<TUser, TRefreshToken>
-    where TUser : class, IFastUser<TKey>
-    where TRefreshToken : class, IFastRefreshToken<TKey>
+public abstract class FastUserStoreCommons<TUser, TRefreshToken, TUserKey> : IFastUserStore<TUser, TRefreshToken, TUserKey>
+    where TUser : class, IFastUser<TUserKey>, new()
+    where TRefreshToken : class, IFastRefreshToken<TUserKey>, new()
 {
     protected readonly FastAuthOptions _authOptions;
     protected readonly IFastUserValidator<TUser>? _userValidator;
@@ -15,7 +15,7 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TKey> : IFastUs
         _userValidator = userValidator;
     }
 
-    public virtual string NormalizeUserIdentifier(string identifier) => identifier.Normalize().ToUpperInvariant();
+    public virtual string NormalizeEmail(string email) => email.Normalize().ToUpperInvariant();
 
     public abstract Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default);
 
@@ -33,31 +33,31 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TKey> : IFastUs
         return claims;
     }
 
-    public abstract Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdentifierAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
+    public abstract Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(string refreshTokenIdentifier, CancellationToken cancellationToken = default);
 
     public virtual DateTime GetRefreshTokenExpireDate(TRefreshToken refreshTokenEntity) => refreshTokenEntity.ExpiresAt;
 
     public virtual string GetRefreshTokenIdentifier(TRefreshToken refreshTokenEntity) => refreshTokenEntity.Id!;
 
-    public virtual Task<TUser?> GetUserByIdentifierAsync(string userIdentifier, CancellationToken cancellationToken = default)
+    public virtual Task<TUser?> GetUserByEmailAsync(string userIdentifier, CancellationToken cancellationToken = default)
     {
-        var normalizedUserIdentifier = NormalizeUserIdentifier(userIdentifier);
-        return GetUserByNormalizedIdentifierAsync(normalizedUserIdentifier, cancellationToken);
+        var normalizedUserIdentifier = NormalizeEmail(userIdentifier);
+        return GetUserByNormalizedEmailAsync(normalizedUserIdentifier, cancellationToken);
     }
 
-    public abstract Task<TUser?> GetUserByNormalizedIdentifierAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
+    public abstract Task<TUser?> GetUserByNormalizedEmailAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default);
 
-    public virtual Task<bool> DoesUserIdentifierExist(string userIdentifier, CancellationToken cancellationToken = default)
+    public virtual Task<bool> DoesEmailExist(string userIdentifier, CancellationToken cancellationToken = default)
     {
-        var nomalizeduserIdentifier = NormalizeUserIdentifier(userIdentifier);
-        return DoesNormalizedUserIdentifierExistAsync(nomalizeduserIdentifier, cancellationToken);
+        var nomalizeduserIdentifier = NormalizeEmail(userIdentifier);
+        return DoesNormalizedEmailExistAsync(nomalizeduserIdentifier, cancellationToken);
     }
 
-    public abstract Task<bool> DoesNormalizedUserIdentifierExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
+    public abstract Task<bool> DoesNormalizedEmailExistAsync(string nomalizeduserIdentifier, CancellationToken cancellationToken = default);
 
     public virtual bool IsRefreshTokenExpired(TRefreshToken refreshTokenEntity) => refreshTokenEntity.ExpiresAt < DateTime.UtcNow;
 
-    public abstract Task MakeRefreshTokenUsedAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
+    public abstract Task RemoveRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default);
 
     public virtual void SetCreationDateTimes(TUser user) => user.CreatedAt = DateTime.UtcNow;
 
@@ -65,16 +65,25 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TKey> : IFastUs
 
     public virtual void SetNormalizedFields(TUser user)
     {
-        user.NormalizedEmail = NormalizeUserIdentifier(user.Email!);
+        
     }
 
     public virtual void SetPassword(TUser user, string password) => user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
     public abstract Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
-    public virtual async ValueTask<Dictionary<string, List<string>>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+    public virtual async ValueTask<List<AuthErrorType>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        Dictionary<string, List<string>>? errors = null;
+        if (user.Email is null)
+        {
+            throw new ArgumentNullException("user.Email");
+        }
+        if (password is null)
+        {
+            throw new ArgumentNullException("password");
+        }
+
+        List<AuthErrorType>? errors = null;
         bool complete = false;
         if (_userValidator is not null)
         {
@@ -84,48 +93,26 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TKey> : IFastUs
         {
             return errors;
         }
-        if (user.Email is null || user.NormalizedEmail is null)
+
+        if (password.Length < 8)
         {
             errors ??= new();
-            if (errors.TryGetValue(nameof(IFastUser<Guid>.Email), out var emailErrors))
-            {
-                emailErrors.Add("Email is required for creating a new user");
-            }
-            errors[nameof(IFastUser<Guid>.Email)] = new() { "Email is required for creating a new user" };
+            errors.Add(AuthErrorType.PasswordVeryShort);
         }
         var emailValidator = new EmailAddressAttribute();
         var emailValid = emailValidator.IsValid(user.Email);
-        if (!emailValid &&  user.Email is not null)
+        if (!emailValid)
         {
             errors ??= new();
-            if (errors.TryGetValue(nameof(IFastUser<Guid>.Email), out var emailErrors))
-            {
-                emailErrors.Add("Provided email is not valid");
-            }
-            errors[nameof(IFastUser<Guid>.Email)] = new() { "Provided email is not valid" };
+            errors.Add(AuthErrorType.InvalidEmailFormat);
         }
-        if (password?.Length < 8)
+        else
         {
-            if (errors is null)
-            {
-                errors = new();
-            }
-            if (errors.TryGetValue("Password", out var passwordErrors))
-            {
-                passwordErrors.Add("Password must be at least 8 characters long");
-            }
-            errors["Password"] = new() { "Password must be at least 8 characters long" };
-        }
-        if (errors is null || !errors.ContainsKey(nameof(IFastUser<Guid>.Email)))
-        {
-            var emailExists = await DoesNormalizedUserIdentifierExistAsync(user.NormalizedEmail!, cancellationToken);
+            var emailExists = await DoesNormalizedEmailExistAsync(user.NormalizedEmail!, cancellationToken);
             if (emailExists)
             {
-                if (errors is null)
-                {
-                    errors = new();
-                }
-                errors[nameof(IFastUser<Guid>.Email)] = new() { "Provided email already exists" };
+                errors ??= new();
+                errors.Add(AuthErrorType.DuplicateEmail);
             }
         }
         return errors;

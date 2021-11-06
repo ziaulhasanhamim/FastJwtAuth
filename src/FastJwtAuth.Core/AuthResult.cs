@@ -12,7 +12,20 @@ public record SuccessAuthResult<TUser>(
     TUser User)
     : IAuthResult<TUser>;
 
-public record FailureAuthResult<TUser>(
-    string Title,
-    Dictionary<string, List<string>>? Errors)
-    : IAuthResult<TUser>;
+
+public enum AuthErrorType
+{
+    DuplicateEmail,
+    InvalidEmailFormat,
+
+    /// <summary>Wrong Credential for login</summary>
+    WrongEmail,
+    
+    /// <summary>Wrong Credential for login</summary>
+    WrongPassword,
+    PasswordVeryShort,
+    InvalidRefreshToken,
+    ExpiredRefreshToken,
+}
+
+public record FailureAuthResult<TUser>(List<AuthErrorType> Errors) : IAuthResult<TUser>;
