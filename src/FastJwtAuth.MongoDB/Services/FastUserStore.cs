@@ -23,8 +23,8 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
             {
                 throw new NullReferenceException($"{nameof(MongoFastAuthOptions.MongoDatabaseGetter)} should not return null");
             }
-            _usersCollection = _db.GetCollection<TUser>("FastUsers");
-            _refreshTokenCollection = _db.GetCollection<TRefreshToken>("FastRefreshTokens");
+            _usersCollection = _db.GetCollection<TUser>(_mongoAuthOptions.UsersCollectionName);
+            _refreshTokenCollection = _db.GetCollection<TRefreshToken>(_mongoAuthOptions.RefreshTokenCollectionName);
             return;
         }
         if (_mongoAuthOptions.MongoDbName is null)
@@ -37,8 +37,8 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
             throw new NullReferenceException($"{nameof(IMongoClient)} service is not added as service");
         }
         _db = mongoClient.GetDatabase(_mongoAuthOptions.MongoDbName);
-        _usersCollection = _db.GetCollection<TUser>("FastUsers");
-        _refreshTokenCollection = _db.GetCollection<TRefreshToken>("FastRefreshTokens");
+        _usersCollection = _db.GetCollection<TUser>(_mongoAuthOptions.UsersCollectionName);
+        _refreshTokenCollection = _db.GetCollection<TRefreshToken>(_mongoAuthOptions.RefreshTokenCollectionName);
     }
 
     public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)

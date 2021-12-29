@@ -148,20 +148,21 @@ public class AuthenticationController : ControllerBase
         {
             Email = request.Email
         };
-        var authResult = await _authService.CreateUserAsync(user, request.Password);
-        if (authResult is SuccessAuthResult<FastUser> successResult)
+        var createResult = await _authService.CreateUserAsync(user, request.Password);
+        if (!createResult.Success)
         {
-            AuthResponse authRes = new(successResult.AccessToken, successResult.RefreshToken);
-            return Ok(authRes);
+            return BadRequest(createResult);
         }
-        return BadRequest(authResult);
+        var authResult = await _authService.AuthenticateAsync(user);
+        AuthResponse authRes = new(authResult.AccessToken, authResult.RefreshToken);
+        return Ok(authRes);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> LoginUser([FromBody] LoginUserRequest request)
     {
-        var authResult = await _authService.LoginUserAsync(request.Email, request.Password);
-        if (authResult is SuccessAuthResult<FastUser> successResult)
+        var authResult = await _authService.AuthenticateAsync(request.Email, request.Password);
+        if (authResult is AuthResult<FastUser>.Success successResult)
         {
             AuthResponse authRes = new(successResult.AccessToken, successResult.RefreshToken);
             return Ok(authRes);
@@ -173,7 +174,7 @@ public class AuthenticationController : ControllerBase
     public async Task<IActionResult> Refresh([FromBody] string refreshToken)
     {
         var authResult = await _authService.RefreshAsync(refreshToken);
-        if (authResult is SuccessAuthResult<FastUser> successResult)
+        if (authResult is AuthResult<FastUser>.Success successResult)
         {
             AuthResponse authRes = new(successResult.AccessToken, successResult.RefreshToken);
             return Ok(authRes);

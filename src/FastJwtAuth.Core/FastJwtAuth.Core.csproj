@@ -4,9 +4,10 @@
 		<TargetFrameworks>net5.0;net6.0</TargetFrameworks>
 		<LangVersion>10.0</LangVersion>
 		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
 		<PackageId>FastJwtAuth.Core</PackageId>
 		<Title>FastJwtAuth</Title>
-		<Version>0.3.0</Version>
+		<Version>0.4.0</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
 		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>

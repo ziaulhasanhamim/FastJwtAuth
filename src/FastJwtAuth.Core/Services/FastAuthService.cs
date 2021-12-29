@@ -16,59 +16,43 @@ public class FastAuthService<TUser, TRefreshToken, TUserKey> : IFastAuthService<
         _authOptions = authOptions;
     }
 
-    public ValueTask<List<AuthErrorType>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+    public async Task<CreateUserResult> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        if (user.NormalizedEmail is null)
-        {
-            user.NormalizedEmail = _userStore.NormalizeEmail(user.Email ?? throw new ArgumentNullException("user.Email"));
-        }
-        return _userStore.ValidateUserAsync(user, password, cancellationToken);
-    }
+        user.NormalizedEmail ??= NormalizeEmail(user.Email ?? throw new ArgumentNullException("user.Email"));
 
-    public async Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, bool validateUser, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
-    {
-        if (validateUser)
+        var validationErrors = await _userStore.ValidateUserAsync(user, password, cancellationToken);
+        if (validationErrors is not null)
         {
-            var validation_errors = await ValidateUserAsync(user, password, cancellationToken);
-            if (validation_errors is not null)
-            {
-                return new FailureAuthResult<TUser>(validation_errors);
-            }
+            return new(false, validationErrors);
         }
 
-        _userStore.SetPassword(user, password);
+        user.PasswordHash ??= HashPassword(password);
 
         user.CreatedAt = DateTime.UtcNow;
         user.LastLogin = user.CreatedAt;
 
         await _userStore.CreateUserAsync(user, cancellationToken);
-        return await generateTokens(user!, signingCredentials, cancellationToken);
+        return new(true, null);
     }
 
-    public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, bool validateUser, CancellationToken cancellationToken = default)
-    {
-        return CreateUserAsync(user, password, validateUser, null, cancellationToken);
-    }
+    public string NormalizeEmail(string email) => _userStore.NormalizeEmail(email);
 
-    public Task<IAuthResult<TUser>> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
-    {
-        return CreateUserAsync(user, password, true, cancellationToken);
-    }
+    public string HashPassword(string password) => _userStore.HashPassword(password);
 
-    public async Task<IAuthResult<TUser>> LoginUserAsync(string email, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
+    public async Task<AuthResult<TUser>> AuthenticateAsync(string email, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
     {
         var user = await _userStore.GetUserByEmailAsync(email, cancellationToken);
         if (user is null)
         {
-            List<AuthErrorType> validationErrors = new() { AuthErrorType.WrongEmail };
-            return new FailureAuthResult<TUser>(validationErrors);
+            List<string> validationErrors = new() { FastAuthErrorCodes.WrongEmail };
+            return new AuthResult<TUser>.Failure(validationErrors);
         }
 
-        var passwordMatched = _userStore.VerifyPassword(user, password);
+        var passwordMatched = VerifyPassword(password, user.PasswordHash!);
         if (!passwordMatched)
         {
-            List<AuthErrorType> validationErrors = new() { AuthErrorType.WrongPassword };
-            return new FailureAuthResult<TUser>(validationErrors);
+            List<string> validationErrors = new() { FastAuthErrorCodes.WrongPassword };
+            return new AuthResult<TUser>.Failure(validationErrors);
         }
 
         user.LastLogin = DateTime.UtcNow;
@@ -77,12 +61,27 @@ public class FastAuthService<TUser, TRefreshToken, TUserKey> : IFastAuthService<
         return await generateTokens(user!, signingCredentials, cancellationToken);
     }
 
-    public Task<IAuthResult<TUser>> LoginUserAsync(string email, string password, CancellationToken cancellationToken = default)
+    public bool VerifyPassword(string rawPassword, string hashedPassword) =>
+        _userStore.VerifyPassword(rawPassword, hashedPassword);
+
+    public Task<AuthResult<TUser>> AuthenticateAsync(string email, string password, CancellationToken cancellationToken = default)
     {
-        return LoginUserAsync(email, password, null, cancellationToken);
+        return AuthenticateAsync(email, password, null, cancellationToken);
     }
 
-    public async Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
+    public async Task<AuthResult<TUser>.Success> AuthenticateAsync(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
+    {
+        user.LastLogin = DateTime.UtcNow;
+        await _userStore.UpdateUserAsync(user, cancellationToken);
+        return await generateTokens(user!, signingCredentials, cancellationToken);
+    }
+
+    public Task<AuthResult<TUser>.Success> AuthenticateAsync(TUser user, CancellationToken cancellationToken = default)
+    {
+        return AuthenticateAsync(user, null, cancellationToken);
+    }
+
+    public async Task<AuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
     {
         if (refreshToken is null)
         {
@@ -95,23 +94,23 @@ public class FastAuthService<TUser, TRefreshToken, TUserKey> : IFastAuthService<
         var (refreshTokenEntity, user) = await _userStore.GetRefreshTokenByIdAsync(refreshToken, cancellationToken);
         if (refreshTokenEntity is null)
         {
-            return new FailureAuthResult<TUser>(new() { AuthErrorType.InvalidRefreshToken });
+            return new AuthResult<TUser>.Failure(new() { FastAuthErrorCodes.InvalidRefreshToken });
         }
         if (refreshTokenEntity.ExpiresAt < DateTime.UtcNow)
         {
-            return new FailureAuthResult<TUser>(new() { AuthErrorType.ExpiredRefreshToken });
+            return new AuthResult<TUser>.Failure(new() { FastAuthErrorCodes.ExpiredRefreshToken });
         }
         await _userStore.RemoveRefreshTokenAsync(refreshTokenEntity, cancellationToken);
         var succResult = await generateTokens(user!, signingCredentials, cancellationToken);
         return succResult;
     }
 
-    public Task<IAuthResult<TUser>> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
+    public Task<AuthResult<TUser>> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
         return RefreshAsync(refreshToken, null, cancellationToken);
     }
 
-    private async Task<SuccessAuthResult<TUser>> generateTokens(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken)
+    private async Task<AuthResult<TUser>.Success> generateTokens(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken)
     {
         string? refreshToken = null;
         DateTime? refreshTokenExpireDate = null;

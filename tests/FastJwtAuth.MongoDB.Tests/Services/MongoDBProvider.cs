@@ -1,35 +1,40 @@
-﻿using MongoDB.Bson;
-using MongoDB.Driver;
+﻿namespace FastJwtAuth.MongoDB.Tests.Services;
+
+using global::MongoDB.Bson;
+using global::MongoDB.Driver;
+using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace FastJwtAuth.MongoDB.Tests.Services
+
+public class MongoDBProvider : IAsyncDisposable
 {
-    public class MongoDBProvider : IAsyncDisposable
+    private static IConfiguration _configurations = 
+        new ConfigurationBuilder()
+            .AddUserSecrets<MongoDBProvider>(true)
+            .Build();
+
+    private readonly IMongoClient _mongoClient;
+
+    private bool _isDisposed;
+
+    public IMongoDatabase TestDatabase { get; private set; }
+
+    public MongoDBProvider()
     {
-        private readonly IMongoClient _mongoClient;
+        var connectionStr = _configurations["mongo-testdb-connection"] ?? "mongodb://127.0.0.1:27017/";
+        var dbName = _configurations["mongo-testdb-name"] ?? "FastJwtAuthTestDb";
+        _mongoClient = new MongoClient(connectionStr);
+        TestDatabase = _mongoClient.GetDatabase(dbName);
+    }
 
-        private bool _isDisposed;
-
-        public IMongoDatabase TestDatabase { get; private set; }
-
-        public MongoDBProvider(string connectionStr = "mongodb://127.0.0.1:27017/")
+    public async ValueTask DisposeAsync()
+    {
+        if (_isDisposed)
         {
-            _mongoClient = new MongoClient(connectionStr);
-            TestDatabase = _mongoClient.GetDatabase($"{Guid.NewGuid()}--FastJwtAuthTestDb");
+            throw new ObjectDisposedException("Already disposed provider");
         }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_isDisposed)
-            {
-                throw new ObjectDisposedException("Already disposed provider");
-            }
-            _isDisposed = true;
-            await _mongoClient.DropDatabaseAsync(TestDatabase.DatabaseNamespace.DatabaseName);
-        }
+        _isDisposed = true;
+        await _mongoClient.DropDatabaseAsync(TestDatabase.DatabaseNamespace.DatabaseName);
     }
 }

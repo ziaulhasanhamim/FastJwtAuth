@@ -2,10 +2,10 @@
 
 
 [Index(nameof(NormalizedEmail))]
-public class FastUser<TKey> : IFastUser<TKey>
+public class FastUser : IFastUser<Guid>
 {
     [Key]
-    public TKey? Id { get; set; }
+    public Guid Id { get; set; }
 
     [Required]
     public string? Email { get; set; }
@@ -20,10 +20,5 @@ public class FastUser<TKey> : IFastUser<TKey>
     public DateTime CreatedAt { get; set; }
 
     public DateTime? LastLogin { get; set; }
-
-}
-
-public class FastUser : FastUser<Guid>
-{
 
 }

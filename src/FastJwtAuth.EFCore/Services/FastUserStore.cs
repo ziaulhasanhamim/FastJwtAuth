@@ -2,9 +2,9 @@
 
 using System.Security.Cryptography;
 
-public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, TUserKey>
-    where TUser : FastUser<TUserKey>, new()
-    where TRefreshToken : FastRefreshToken<TUser, TUserKey>, new()
+public class FastUserStore<TUser, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, Guid>
+    where TUser : FastUser, new()
+    where TRefreshToken : FastRefreshToken<TUser>, new()
     where TDbContext : DbContext
 {
     protected readonly TDbContext _dbContext;
@@ -45,7 +45,9 @@ public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUse
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(string id, CancellationToken cancellationToken = default)
+    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(
+        string id, 
+        CancellationToken cancellationToken = default)
     {
         var refreshToken = await _dbContext.Set<TRefreshToken>()
             .Where(token => token.Id == id)
@@ -54,12 +56,16 @@ public class FastUserStore<TUser, TUserKey, TRefreshToken, TDbContext> : FastUse
         return (refreshToken, refreshToken?.User);
     }
 
-    public override Task<TUser?> GetUserByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
+    public override Task<TUser?> GetUserByNormalizedEmailAsync(
+        string normalizedEmail, 
+        CancellationToken cancellationToken = default) =>
         _dbContext.Set<TUser>()
             .Where(user => user.NormalizedEmail == normalizedEmail)
             .FirstOrDefaultAsync(cancellationToken)!;
 
-    public override Task RemoveRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
+    public override Task RemoveRefreshTokenAsync(
+        TRefreshToken refreshTokenEntity, 
+        CancellationToken cancellationToken = default)
     {
         _dbContext.Remove(refreshTokenEntity);
         return _dbContext.SaveChangesAsync(cancellationToken);

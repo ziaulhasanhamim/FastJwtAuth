@@ -17,7 +17,7 @@ public interface IFastUserStore<TUser, TRefreshToken, TUserKey>
     /// <param name="password">Password to validate</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns>List of errors. Null if user is valid</returns>
-    ValueTask<List<AuthErrorType>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
+    ValueTask<List<string>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Add User To Database
@@ -43,9 +43,9 @@ public interface IFastUserStore<TUser, TRefreshToken, TUserKey>
     /// <summary>
     /// Hash given password and set the hashed to User Entity
     /// </summary>
-    /// <param name="user">User Entity</param>
     /// <param name="password">Unhashed text password</param>
-    void SetPassword(TUser user, string password);
+    /// <returns>Hashed password</returns>
+    string HashPassword(string password);
 
     /// <summary>
     /// Update user entity on db
@@ -77,10 +77,10 @@ public interface IFastUserStore<TUser, TRefreshToken, TUserKey>
     /// <summary>
     /// Verify password with the user's password
     /// </summary>
-    /// <param name="user">User Entity</param>
-    /// <param name="password">Unhashed text password</param>
+    /// <param name="rawPassword">Unhashed text password</param>
+    /// <param name="hashedPassword">Hashed password</param>
     /// <returns>true if password was right</returns>
-    bool VerifyPassword(TUser user, string password);
+    bool VerifyPassword(string rawPassword, string hashedPassword);
 
     /// <summary>
     /// Make the refresh token used. so that it cant be used anymore

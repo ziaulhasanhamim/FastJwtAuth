@@ -1,6 +1,7 @@
 ﻿namespace FastJwtAuth.Core.Services;
 
 using System.IdentityModel.Tokens.Jwt;
+using BCrypt = BCrypt.Net.BCrypt;
 
 public abstract class FastUserStoreCommons<TUser, TRefreshToken, TUserKey> : IFastUserStore<TUser, TRefreshToken, TUserKey>
     where TUser : class, IFastUser<TUserKey>, new()
@@ -63,27 +64,26 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TUserKey> : IFa
 
     public virtual void SetLoginDateTimes(TUser user) => user.LastLogin = DateTime.UtcNow;
 
-    public virtual void SetNormalizedFields(TUser user)
-    {
-        
-    }
-
-    public virtual void SetPassword(TUser user, string password) => user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+    public virtual string HashPassword(string password) => BCrypt.HashPassword(password);
 
     public abstract Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default);
 
-    public virtual async ValueTask<List<AuthErrorType>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+    public virtual async ValueTask<List<string>?> ValidateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
     {
         if (user.Email is null)
         {
             throw new ArgumentNullException("user.Email");
+        }
+        if (user.NormalizedEmail is null)
+        {
+            throw new ArgumentNullException("user.NormalizedEmail");
         }
         if (password is null)
         {
             throw new ArgumentNullException("password");
         }
 
-        List<AuthErrorType>? errors = null;
+        List<string>? errors = null;
         bool complete = false;
         if (_userValidator is not null)
         {
@@ -97,14 +97,14 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TUserKey> : IFa
         if (password.Length < 8)
         {
             errors ??= new();
-            errors.Add(AuthErrorType.PasswordVeryShort);
+            errors.Add(FastAuthErrorCodes.PasswordVeryShort);
         }
         var emailValidator = new EmailAddressAttribute();
         var emailValid = emailValidator.IsValid(user.Email);
         if (!emailValid)
         {
             errors ??= new();
-            errors.Add(AuthErrorType.InvalidEmailFormat);
+            errors.Add(FastAuthErrorCodes.InvalidEmailFormat);
         }
         else
         {
@@ -112,11 +112,12 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TUserKey> : IFa
             if (emailExists)
             {
                 errors ??= new();
-                errors.Add(AuthErrorType.DuplicateEmail);
+                errors.Add(FastAuthErrorCodes.DuplicateEmail);
             }
         }
         return errors;
     }
 
-    public virtual bool VerifyPassword(TUser user, string password) => BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+    public virtual bool VerifyPassword(string rawPassword, string hashedPassword) => 
+        BCrypt.Verify(rawPassword, hashedPassword);
 }
