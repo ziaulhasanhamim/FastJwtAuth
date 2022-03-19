@@ -4,6 +4,7 @@ using global::MongoDB.Bson.Serialization.Attributes;
 
 public class FastUser : IFastUser<string>
 {
+
     [BsonId, BsonRepresentation(BsonType.ObjectId)]
     public string? Id { get; set; }
 

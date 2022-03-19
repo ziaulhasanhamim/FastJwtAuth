@@ -13,7 +13,9 @@ using System.Threading.Tasks;
 
 public static class Extensions
 {
-    public static void ConfigureAuthModels<TUser, TRefreshToken>(this ModelBuilder builder, FastAuthOptions authOptions)
+    public static void ConfigureAuthModels<TUser, TRefreshToken>(
+        this ModelBuilder builder, 
+        EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions)
         where TUser : FastUser, new()
         where TRefreshToken : FastRefreshToken<TUser>, new()
     {
@@ -24,52 +26,85 @@ public static class Extensions
         }
     }
 
-    public static void ConfigureAuthModels<TUser>(this ModelBuilder builder, FastAuthOptions authOptions)
+    public static void ConfigureAuthModels<TUser>(
+        this ModelBuilder builder, 
+        EFCoreFastAuthOptions<TUser> authOptions)
         where TUser : FastUser, new()
     {
         ConfigureAuthModels<TUser, FastRefreshToken<TUser>>(builder, authOptions);
     }
 
 
-    public static void ConfigureAuthModels(this ModelBuilder builder, FastAuthOptions authOptions)
+    public static void ConfigureAuthModels(
+        this ModelBuilder builder, 
+        EFCoreFastAuthOptions authOptions)
     {
         ConfigureAuthModels<FastUser, FastRefreshToken>(builder, authOptions);
     }
 
-    public static void AddFastAuthWithEFCore<TUser, TDbContext>(this IServiceCollection services, Action<FastAuthOptions> optionAction)
+    public static void AddFastAuthWithEFCore<TUser, TRefreshToken, TDbContext>(
+        this IServiceCollection services, 
+        Action<EFCoreFastAuthOptions<TUser, TRefreshToken>> optionAction)
         where TUser : FastUser, new()
+        where TRefreshToken : FastRefreshToken<TUser>, new()
         where TDbContext : DbContext
     {
-        FastAuthOptions authOptions = new();
+        EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions = new();
         optionAction(authOptions);
         services.AddSingleton(authOptions);
 
         services.AddScoped<
-            IFastUserStore<TUser, FastRefreshToken<TUser>, Guid>,
-            FastUserStore<TUser, FastRefreshToken<TUser>, TDbContext>>();
+            IFastUserStore<TUser, TRefreshToken>,
+            FastUserStore<TUser, TRefreshToken, TDbContext>>();
+
+        services.AddScoped<
+            IFastAuthService<TUser, TRefreshToken>,
+            FastAuthService<TUser, TRefreshToken>>();
+    }
+
+    public static void AddFastAuthWithEFCore<TUser, TDbContext>(
+        this IServiceCollection services, 
+        Action<EFCoreFastAuthOptions<TUser>> optionAction)
+        where TUser : FastUser, new()
+        where TDbContext : DbContext
+    {
+        EFCoreFastAuthOptions<TUser> authOptions = new();
+        optionAction(authOptions);
+        services.AddSingleton(authOptions);
+        services.AddSingleton<EFCoreFastAuthOptions<TUser, FastRefreshToken<TUser>>>(authOptions);
+        
+        services.AddScoped<IFastUserStore<TUser>, FastUserStore<TUser, TDbContext>>();
+
+        services.AddScoped<IFastUserStore<TUser, FastRefreshToken<TUser>>>(
+            sp => sp.GetService<IFastUserStore<TUser>>()!);
 
         services.AddScoped<
             IFastAuthService<TUser>,
             FastAuthService<TUser>>();
 
-        services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>, Guid>>(
+        services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>>>(
             sp => sp.GetService<IFastAuthService<TUser>>()!);
     }
 
-    public static void AddFastAuthWithEFCore<TDbContext>(this IServiceCollection services, Action<FastAuthOptions> optionAction)
+    public static void AddFastAuthWithEFCore<TDbContext>(
+        this IServiceCollection services, 
+        Action<EFCoreFastAuthOptions> optionAction)
         where TDbContext : DbContext
     {
-        FastAuthOptions authOptions = new();
+        EFCoreFastAuthOptions authOptions = new();
         optionAction(authOptions);
         services.AddSingleton(authOptions);
+        services.AddSingleton<EFCoreFastAuthOptions<FastUser, FastRefreshToken>>(authOptions);
+        
+        services.AddScoped<IFastUserStore, FastUserStore<TDbContext>>();
 
-        services.AddScoped<
-            IFastUserStore<FastUser, FastRefreshToken, Guid>,
-            FastUserStore<FastUser, FastRefreshToken, TDbContext>>();
+        services.AddScoped<IFastUserStore<FastUser, FastRefreshToken>>(
+            sp => sp.GetService<IFastUserStore>()!);
 
         services.AddScoped<IFastAuthService, FastAuthService>();
 
-        services.AddScoped<IFastAuthService<FastUser, FastRefreshToken, Guid>>(sp => sp.GetService<IFastAuthService>()!);
+        services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(
+            sp => sp.GetService<IFastAuthService>()!);
     }
 
     public static TUser MapClaimsToFastUser<TUser>(this ClaimsPrincipal claimsPrincipal)

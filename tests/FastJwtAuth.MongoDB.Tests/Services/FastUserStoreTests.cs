@@ -1,7 +1,6 @@
 ﻿namespace FastJwtAuth.MongoDB.Tests.Services;
 
 using FastJwtAuth.MongoDB.Services;
-using FastJwtAuth.MongoDB.Tests.AutofixtureUtils;
 using FluentAssertions;
 using global::MongoDB.Driver;
 using NSubstitute;
@@ -9,19 +8,23 @@ using Xunit;
 
 public class FastUserStoreTests
 {
-    [Theory, MoreAutoData]
-    public async Task ValidateUserAsync_InvalidEmailAndPassword_CustomErrors_ErrorsReturned(
-        FastUser user,
-        MongoFastAuthOptions authOptions)
+    [Fact]
+    public async Task ValidateUserAsync_InvalidEmailAndPassword_CustomErrors_ErrorsReturned()
     {
-        user.Email = "test";
+        FastUser user = new()
+        {
+            Email = "test",
+            NormalizedEmail = "test".Normalize().ToUpperInvariant()
+        };
         var password = "test";
         TestUserValidator userValidator = new((_, _) =>
         {
             return (false, new() { "OtherErrorCode" });
         });
-
-        authOptions.MongoDatabaseGetter = _ => Substitute.For<IMongoDatabase>();
+        MongoFastAuthOptions<FastUser, FastRefreshToken> authOptions = new()
+        {
+            MongoDatabaseGetter = _ => Substitute.For<IMongoDatabase>()
+        };
 
         FastUserStore<FastUser, FastRefreshToken> userStore = new(authOptions, null!, userValidator);
 
@@ -34,14 +37,14 @@ public class FastUserStoreTests
         result.Should().Contain("OtherErrorCode");
     }
 
-    [Theory, MoreAutoData]
-    public async Task ValidateUserAsync_DuplicateEmailAndPassword_CustomErrors_ErrorsReturned(
-        FastUser user,
-        MongoFastAuthOptions authOptions)
+    [Fact]
+    public async Task ValidateUserAsync_DuplicateEmail_CustomErrors_ErrorsReturned()
     {
-        user.Email = "test@test.com";
-        user.NormalizedEmail = user.Email.Normalize().ToUpperInvariant();
-        user.Id = null;
+        FastUser user = new()
+        {
+            Email = "test@test.com",
+            NormalizedEmail = "test@test.com".Normalize().ToUpperInvariant()
+        };
         var password = "test";
         TestUserValidator userValidator = new((_, _) =>
         {
@@ -49,7 +52,11 @@ public class FastUserStoreTests
         });
 
         await using MongoDBProvider dbProvider = new();
-        authOptions.MongoDatabaseGetter = _ => dbProvider.TestDatabase;
+        
+        MongoFastAuthOptions<FastUser, FastRefreshToken> authOptions = new()
+        {
+            MongoDatabaseGetter = _ => dbProvider.TestDatabase
+        };
 
         var usersCollections = dbProvider.TestDatabase
             .GetCollection<FastUser>(authOptions.UsersCollectionName);
@@ -66,8 +73,8 @@ public class FastUserStoreTests
         result.Should().Contain("OtherErrorCode");
     }
 
-    [Theory, MoreAutoData]
-    public async Task ValidateUserAsync_AllOkay_NullReturned(MongoFastAuthOptions authOptions)
+    [Fact]
+    public async Task ValidateUserAsync_AllOkay_NullReturned()
     {
         FastUser user = new()
         {
@@ -77,8 +84,10 @@ public class FastUserStoreTests
         var password = "test1234";
 
         await using MongoDBProvider dbProvider = new();
-
-        authOptions.MongoDatabaseGetter = _ => dbProvider.TestDatabase;
+        MongoFastAuthOptions authOptions = new()
+        {
+            MongoDatabaseGetter = _ => dbProvider.TestDatabase
+        };
         FastUserStore<FastUser, FastRefreshToken> userStore = new(authOptions, null!);
 
         var result = await userStore.ValidateUserAsync(user, password);

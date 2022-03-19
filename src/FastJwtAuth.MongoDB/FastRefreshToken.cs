@@ -5,6 +5,7 @@ using global::MongoDB.Bson.Serialization.Attributes;
 public class FastRefreshToken<TUser> : IFastRefreshToken<string>
     where TUser : FastUser
 {
+
     [BsonId]
     public string? Id { get; set; }
 

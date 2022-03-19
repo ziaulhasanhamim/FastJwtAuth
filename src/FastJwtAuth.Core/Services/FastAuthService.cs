@@ -8,9 +8,11 @@ public class FastAuthService<TUser, TRefreshToken, TUserKey> : IFastAuthService<
     where TRefreshToken : class, IFastRefreshToken<TUserKey>, new()
 {
     private readonly IFastUserStore<TUser, TRefreshToken, TUserKey> _userStore;
-    private readonly FastAuthOptions _authOptions;
+    private readonly FastAuthOptions<TUser, TRefreshToken, TUserKey> _authOptions;
 
-    public FastAuthService(IFastUserStore<TUser, TRefreshToken, TUserKey> userStore, FastAuthOptions authOptions)
+    public FastAuthService(
+        IFastUserStore<TUser, TRefreshToken, TUserKey> userStore, 
+        FastAuthOptions<TUser, TRefreshToken, TUserKey> authOptions)
     {
         _userStore = userStore;
         _authOptions = authOptions;

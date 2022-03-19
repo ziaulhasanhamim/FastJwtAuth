@@ -3,16 +3,19 @@
 using System.Security.Cryptography;
 
 
-public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, TRefreshToken, string>
+public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, TRefreshToken, string>, IFastUserStore<TUser, TRefreshToken>
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
 {
-    private readonly MongoFastAuthOptions _mongoAuthOptions;
+    private readonly MongoFastAuthOptions<TUser, TRefreshToken> _mongoAuthOptions;
     private readonly IMongoDatabase _db;
     private readonly IMongoCollection<TUser> _usersCollection;
     private readonly IMongoCollection<TRefreshToken> _refreshTokenCollection;
 
-    public FastUserStore(MongoFastAuthOptions authOptions, IServiceProvider sp, IFastUserValidator<TUser>? userValidator = null)
+    public FastUserStore(
+        MongoFastAuthOptions<TUser, TRefreshToken> authOptions, 
+        IServiceProvider sp, 
+        IFastUserValidator<TUser>? userValidator = null)
         : base(authOptions, userValidator)
     {
         _mongoAuthOptions = authOptions;
@@ -21,7 +24,7 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
             _db = _mongoAuthOptions.MongoDatabaseGetter(sp);
             if (_db is null)
             {
-                throw new NullReferenceException($"{nameof(MongoFastAuthOptions.MongoDatabaseGetter)} should not return null");
+                throw new NullReferenceException($"{nameof(authOptions.MongoDatabaseGetter)} should not return null");
             }
             _usersCollection = _db.GetCollection<TUser>(_mongoAuthOptions.UsersCollectionName);
             _refreshTokenCollection = _db.GetCollection<TRefreshToken>(_mongoAuthOptions.RefreshTokenCollectionName);
@@ -29,7 +32,7 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
         }
         if (_mongoAuthOptions.MongoDbName is null)
         {
-            throw new NullReferenceException($"{nameof(MongoFastAuthOptions.MongoDbName)} should not be null if {nameof(MongoFastAuthOptions.MongoDbName)}");
+            throw new NullReferenceException($"{nameof(authOptions.MongoDbName)} should not be null if {nameof(authOptions.MongoDbName)}");
         }
         var mongoClient = (IMongoClient?)sp.GetService(typeof(IMongoClient));
         if (mongoClient is null)

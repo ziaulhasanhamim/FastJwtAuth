@@ -10,8 +10,8 @@ namespace GettingStarted
 {
     public class ApplicationDbContext : DbContext
     {
-        private readonly FastAuthOptions _authOptions;
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, FastAuthOptions authOptions)
+        private readonly EFCoreFastAuthOptions _authOptions;
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, EFCoreFastAuthOptions authOptions)
             : base(options)
         {
             _authOptions = authOptions;

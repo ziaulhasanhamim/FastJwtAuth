@@ -1,15 +1,19 @@
 ﻿namespace FastJwtAuth.EFCore.Services;
 
 using System.Security.Cryptography;
+using FastJwtAuth.EFCore;
 
-public class FastUserStore<TUser, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, Guid>
+public class FastUserStore<TUser, TRefreshToken, TDbContext> : FastUserStoreCommons<TUser, TRefreshToken, Guid>, IFastUserStore<TUser, TRefreshToken>
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
     where TDbContext : DbContext
 {
     protected readonly TDbContext _dbContext;
 
-    public FastUserStore(TDbContext dbContext, FastAuthOptions authOptions, IFastUserValidator<TUser>? userValidator = null)
+    public FastUserStore(
+        TDbContext dbContext, 
+        EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions, 
+        IFastUserValidator<TUser>? userValidator = null)
         : base(authOptions, userValidator)
     {
         _dbContext = dbContext;

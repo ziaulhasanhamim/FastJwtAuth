@@ -7,10 +7,10 @@ public abstract class FastUserStoreCommons<TUser, TRefreshToken, TUserKey> : IFa
     where TUser : class, IFastUser<TUserKey>, new()
     where TRefreshToken : class, IFastRefreshToken<TUserKey>, new()
 {
-    protected readonly FastAuthOptions _authOptions;
+    protected readonly FastAuthOptions<TUser, TRefreshToken, TUserKey> _authOptions;
     protected readonly IFastUserValidator<TUser>? _userValidator;
 
-    protected FastUserStoreCommons(FastAuthOptions authOptions, IFastUserValidator<TUser>? userValidator)
+    protected FastUserStoreCommons(FastAuthOptions<TUser, TRefreshToken, TUserKey> authOptions, IFastUserValidator<TUser>? userValidator)
     {
         _authOptions = authOptions;
         _userValidator = userValidator;
