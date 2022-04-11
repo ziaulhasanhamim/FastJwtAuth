@@ -2,7 +2,9 @@
 
 using Microsoft.IdentityModel.Tokens;
 
-public class FastAuthOptions
+public abstract class FastAuthOptions<TUser, TRefreshToken, TUserKey>
+    where TUser : IFastUser<TUserKey>
+    where TRefreshToken : IFastRefreshToken<TUserKey>
 {
     public SigningCredentials? DefaultSigningCredentials { get; set; }
 
@@ -26,5 +28,5 @@ public class FastAuthOptions
     /// <summary>
     /// This event is fired when generating claims. It Gives a List of previously created claims, user entity and service provider as parameter. New claims should be added to the List
     /// </summary>
-    public Action<List<Claim>, object>? OnClaimsGeneration { get; set; }
+    public Action<List<Claim>, TUser>? OnClaimsGeneration { get; set; }
 }

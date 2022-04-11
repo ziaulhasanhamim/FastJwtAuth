@@ -77,5 +77,5 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
 
     bool VerifyPassword(string rawPassword, string hashedPassword);
 
-    string NormalizeEmail(string email);
+    string NormalizeText(string email);
 }

@@ -1,18 +1,26 @@
 ﻿namespace FastJwtAuth.EFCore.Services;
 
-public class FastAuthService<TUser> : FastAuthService<TUser, FastRefreshToken<TUser>, Guid>, IFastAuthService<TUser>
+public class FastAuthService<TUser, TDbContext> : FastAuthService<TUser, FastRefreshToken<TUser>, TDbContext>, IFastAuthService<TUser>
     where TUser : FastUser, new()
+    where TDbContext : DbContext
 {
-    public FastAuthService(IFastUserStore<TUser, FastRefreshToken<TUser>, Guid> userStore, FastAuthOptions authOptions)
-        : base(userStore, authOptions)
+    public FastAuthService(
+        TDbContext dbContext,
+        EFCoreFastAuthOptions<TUser> authOptions,
+        IFastUserValidator<TUser> userValidator)
+        : base(dbContext, authOptions, userValidator)
     {
     }
 }
 
-public class FastAuthService : FastAuthService<FastUser, FastRefreshToken, Guid>, IFastAuthService
+public class FastAuthService<TDbContext> : FastAuthService<FastUser, FastRefreshToken, TDbContext>, IFastAuthService
+    where TDbContext : DbContext
 {
-    public FastAuthService(IFastUserStore<FastUser, FastRefreshToken, Guid> userStore, FastAuthOptions authOptions)
-        : base(userStore, authOptions)
+    public FastAuthService(
+        TDbContext dbContext,
+        EFCoreFastAuthOptions authOptions,
+        IFastUserValidator<FastUser> userValidator)
+        : base(dbContext, authOptions, userValidator)
     {
     }
 }

@@ -1,7 +1,6 @@
 ﻿namespace FastJwtAuth.EFCore.Tests.Services;
 
 using FastJwtAuth.EFCore.Services;
-using FastJwtAuth.EFCore.Tests.AutofixtureUtils;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -10,19 +9,21 @@ using Xunit;
 
 public class FastUserStoreTests
 {
-    [Theory, MoreAutoData]
-    public async Task ValidateUserAsync_InvalidEmailAndPassword_CustomErrors_ErrorsReturned(
-        FastUser user,
-        FastAuthOptions authOptions)
+    [Fact]
+    public async Task ValidateUserAsync_InvalidEmailAndPassword_CustomErrors_ErrorsReturned()
     {
-        user.Email = "test";
+        FastUser user = new()
+        {
+            Email = "test",
+            NormalizedEmail = "test".Normalize().ToUpperInvariant()
+        };
         var password = "test";
         TestUserValidator userValidator = new((_, _) =>
         {
             return (false, new() { "OtherErrorCode" });
         });
 
-        FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(null!, authOptions, userValidator);
+        FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(null!, new(), userValidator);
 
         var result = await userStore.ValidateUserAsync(user, password);
 
@@ -33,13 +34,17 @@ public class FastUserStoreTests
         result.Should().Contain("OtherErrorCode");
     }
 
-    [Theory, MoreAutoData]
-    public async Task ValidateUserAsync_DuplicateEmailAndPassword_CustomErrors_ErrorsReturned(
-        FastUser user,
-        FastAuthOptions authOptions)
+    [Fact]
+    public async Task ValidateUserAsync_DuplicateEmail_CustomErrors_ErrorsReturned()
     {
-        user.Email = "test@test.com";
         var password = "test";
+        FastUser user = new()
+        {
+            Email = "test@test.com",
+            NormalizedEmail = "test@test.com".Normalize().ToUpperInvariant(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
+        };
+        
         TestUserValidator userValidator = new((_, _) =>
         {
             return (false, new() { "OtherErrorCode" });
@@ -50,7 +55,7 @@ public class FastUserStoreTests
         dbContext.Add(user);
         await dbContext.SaveChangesAsync();
 
-        FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, authOptions, userValidator);
+        FastUserStore<FastUser, FastRefreshToken, DbContext> userStore = new(dbContext, new(), userValidator);
 
         var result = await userStore.ValidateUserAsync(user, password);
 

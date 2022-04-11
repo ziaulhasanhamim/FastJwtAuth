@@ -21,13 +21,15 @@ public static class Extensions
         return CreateFastUserIndexes<FastUser>(usersCollection, cancellationToken);
     }
 
-    public static MongoFastAuthBuilder AddFastAuthWithMongo<TUser>(this IServiceCollection services, Action<MongoFastAuthOptions> optionAction)
+    public static void AddFastAuthWithMongo<TUser>(
+        this IServiceCollection services, 
+        Action<MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>> optionAction)
         where TUser : FastUser, new()
     {
-        MongoFastAuthOptions authOptions = new();
+        MongoFastAuthOptions<TUser, FastRefreshToken<TUser>> authOptions = new();
         optionAction(authOptions);
         services.AddSingleton(authOptions);
-        services.AddSingleton<FastAuthOptions>(authOptions);
+        services.AddSingleton<FastAuthOptions<TUser, FastRefreshToken<TUser>, string>>(authOptions);
 
         services.AddScoped<
             IFastUserStore<TUser, FastRefreshToken<TUser>, string>,
@@ -39,22 +41,14 @@ public static class Extensions
 
         services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>, string>>(
             sp => sp.GetService<IFastAuthService<TUser>>()!);
-
-        return new()
-        {
-            AuthOptions = authOptions,
-            Services = services,
-            UserType = typeof(TUser),
-            RefreshTokenType = typeof(FastRefreshToken<TUser>)
-        };
     }
 
-    public static MongoFastAuthBuilder AddFastAuthWithMongo(this IServiceCollection services, Action<MongoFastAuthOptions> optionAction)
+    public static void AddFastAuthWithMongo(this IServiceCollection services, Action<MongoFastAuthOptions<FastUser, FastRefreshToken>> optionAction)
     {
-        MongoFastAuthOptions authOptions = new();
+        MongoFastAuthOptions<FastUser, FastRefreshToken> authOptions = new();
         optionAction(authOptions);
         services.AddSingleton(authOptions);
-        services.AddSingleton<FastAuthOptions>(authOptions);
+        services.AddSingleton<FastAuthOptions<FastUser, FastRefreshToken, string>>(authOptions);
 
         services.AddScoped<
             IFastUserStore<FastUser, FastRefreshToken, string>,
@@ -63,24 +57,6 @@ public static class Extensions
         services.AddScoped<IFastAuthService, FastAuthService>();
 
         services.AddScoped<IFastAuthService<FastUser, FastRefreshToken, string>>(sp => sp.GetService<IFastAuthService>()!);
-
-        return new()
-        {
-            AuthOptions = authOptions,
-            Services = services,
-            UserType = typeof(FastUser),
-            RefreshTokenType = typeof(FastRefreshToken)
-        };
-    }
-
-    public static MongoFastAuthBuilder AddMongoStartupHostedService(this MongoFastAuthBuilder builder)
-    {
-        Type implmentationType = typeof(MongoStartupService<,>)
-                            .MakeGenericType(builder.UserType!, builder.RefreshTokenType!);
-        builder.Services!
-            .TryAddEnumerable(ServiceDescriptor.Singleton(typeof(IHostedService), implmentationType));
-
-        return builder;
     }
 
     public static TUser MapClaimsToFastUser<TUser>(this ClaimsPrincipal claimsPrincipal)

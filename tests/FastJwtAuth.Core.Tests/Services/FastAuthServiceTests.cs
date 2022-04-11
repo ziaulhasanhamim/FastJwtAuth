@@ -1,9 +1,7 @@
 ﻿namespace FastJwtAuth.Core.Tests.Services;
 
-using AutoFixture.Xunit2;
 using FastJwtAuth.Core.Services;
 using FastJwtAuth;
-using FastJwtAuth.Core.Tests.AutofixtureUtils;
 using FastJwtAuth.Core.Tests.Entities;
 using FluentAssertions;
 using Microsoft.IdentityModel.Tokens;
@@ -13,55 +11,65 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Xunit;
 using System.Text;
+using NSubstitute.Extensions;
 
 public class FastAuthServiceTests
 {
-    [Theory, MoreAutoData]
-    public async Task CreateUserAsync_InvalidInput_FailureAuthResult(
-        FastUser user,
-        string password,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        [Frozen] FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task CreateUserAsync_InvalidInput_FailureAuthResult()
     {
-        List<string> errors = new() { FastAuthErrorCodes.PasswordVeryShort };
-        userStore.ValidateUserAsync(user, password)
-            .Returns(errors);
+        FastUser user = new()
+        {
+            Email = "Test@test.com"
+        };
+        var password = "pass";
+
+        var userValidator = Substitute.For<IFastUserValidator<FastUser>>();
+
+        userValidator.ValidateAsync(user, password)
+            .Returns((false, new() { "SomeOtherError" }));
+
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(userValidator);
+
+        authService.Configure()
+            .DoesNormalizedEmailExistAsyncMock(authService.NormalizeText(user.Email), default)
+            .Returns(true);
 
         var result = await authService.CreateUserAsync(user, password);
 
         result.Success.Should().BeFalse();
-        result.ErrorCodes.Should().HaveCount(1);
+        result.ErrorCodes.Should().HaveCount(3);
+        result.ErrorCodes.Should()
+            .Contain(new[] { "SomeOtherError", FastAuthErrorCodes.PasswordVeryShort, FastAuthErrorCodes.DuplicateEmail });
     }
 
-    [Theory, MoreAutoData]
-    public async Task CreateUserAsync_ValidInput_SuccessAuthResult(
-        string password,
-        FastRefreshToken refreshToken,
-        [Frozen] FastAuthOptions fastAuthOptions,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task CreateUserAsync_ValidInput_SuccessAuthResult()
     {
         FastUser user = new()
         {
             Email = "teat@Test.com"
         };
+        var password = "testpass";
 
-        fastAuthOptions.UseRefreshToken = true;
-        fastAuthOptions.AccessTokenLifeSpan = TimeSpan.FromMinutes(15);
-        fastAuthOptions.RefreshTokenLifeSpan = TimeSpan.FromDays(15);
-        refreshToken.ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan;
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
+            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+        };
+        FastRefreshToken refreshToken = new()
+        {
+            Id = Guid.NewGuid().ToString(),
+            ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan
+        };
         SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
-        SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
+        fastAuthOptions.DefaultSigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-        userStore.NormalizeEmail(Arg.Any<string>())
-            .Returns(callInfo => callInfo.ArgAt<string>(0).Normalize().ToUpperInvariant());
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
-        userStore.CreateRefreshTokenAsync(user, default)
+        authService.Configure().CreateRefreshTokenAsyncMock(user, default)
             .Returns(refreshToken);
-
-        Claim[] claims = { new("Id", user.Id.ToString()) };
-        userStore.GetClaimsForUser(user)
-            .Returns(claims);
 
         var result = await authService.CreateUserAsync(user, password);
 
@@ -72,19 +80,16 @@ public class FastAuthServiceTests
         user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
         user.LastLogin.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
 
-        userStore.Received(1).HashPassword(password);
-        await userStore.Received(1).CreateUserAsync(user);
+        authService.Received(1).HashPassword(password);
+        await authService.Received(1).AddUserAsyncMock(user, default);
     }
 
-    [Theory, MoreAutoData]
-    public async Task LoginUserAsync_InvalidEmail_FailureAuthResult(
-        string userIdentifier,
-        string password,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task LoginUserAsync_InvalidEmail_FailureAuthResult()
     {
-        userStore.GetUserByEmailAsync(userIdentifier)
-            .Returns((FastUser)null!);
+        var userIdentifier = "test@mail.com";
+        var password = "testpass";
+        var authService = Substitute.For<FastAuthServiceMock>();
 
         var result = await authService.AuthenticateAsync(userIdentifier, password);
 
@@ -95,18 +100,17 @@ public class FastAuthServiceTests
         failureResult.ErrorCodes.Should().Contain(FastAuthErrorCodes.WrongEmail);
     }
 
-    [Theory, MoreAutoData]
-    public async Task LoginUserAsync_InvalidPassword_FailureAuthResult(
-        FastUser user,
-        string password,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task LoginUserAsync_InvalidPassword_FailureAuthResult()
     {
-        userStore.GetUserByEmailAsync(user.Email!)
+        FastUser user = new()
+        {
+            Email = "teSt@test.com"
+        };
+        var password = "testpass";
+        var authService = Substitute.For<FastAuthServiceMock>();
+        authService.GetUserByNormalizedEmailAsyncMock(authService.NormalizeText(user.Email)!, default)
             .Returns(user);
-
-        userStore.VerifyPassword(password, user.PasswordHash!)
-            .Returns(false);
 
         var result = await authService.AuthenticateAsync(user.Email!, password);
 
@@ -115,36 +119,46 @@ public class FastAuthServiceTests
 
         failureResult.ErrorCodes.Should().HaveCount(1);
         failureResult.ErrorCodes.Should().Contain(FastAuthErrorCodes.WrongPassword);
+
+        authService.Received(1).VerifyPassword(password, user.PasswordHash!);
     }
 
-    [Theory, MoreAutoData]
-    public async Task LoginUserAsync_ValidInput_SuccessAuthResult(
-        FastUser user,
-        string password,
-        FastRefreshToken refreshToken,
-        [Frozen] FastAuthOptions fastAuthOptions,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task LoginUserAsync_ValidInput_SuccessAuthResult()
     {
-        user.LastLogin = null;
-        fastAuthOptions.UseRefreshToken = true;
-        fastAuthOptions.AccessTokenLifeSpan = TimeSpan.FromMinutes(15);
-        fastAuthOptions.RefreshTokenLifeSpan = TimeSpan.FromDays(15);
-        refreshToken.ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan;
+        FastUser user = new()
+        {
+            Email = "Test@test.com"
+        };
+        var password = "testpass";
+
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
+            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+        };
+
+        FastRefreshToken refreshToken = new()
+        {
+            ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan
+        };
+
         SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
         fastAuthOptions.DefaultSigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-        userStore.GetUserByEmailAsync(user.Email!)
+        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
+        authService.GetUserByNormalizedEmailAsyncMock(authService.NormalizeText(user.Email!), default)
             .Returns(user);
 
-        userStore.VerifyPassword(password, user.PasswordHash!)
+        authService.VerifyPassword(password, user.PasswordHash!)
             .Returns(true);
 
-        userStore.CreateRefreshTokenAsync(user)
+        authService.CreateRefreshTokenAsyncMock(user, default)
             .Returns(refreshToken);
 
-        Claim[] claims = { new("Id", user.Id.ToString()) };
-        userStore.GetClaimsForUser(user)
+        List<Claim> claims = new() { new("Id", user.Id.ToString()) };
+        authService.GetClaimsForUser(user)
             .Returns(claims);
 
         var result = await authService.AuthenticateAsync(user.Email!, password);
@@ -153,16 +167,24 @@ public class FastAuthServiceTests
 
         user.LastLogin.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
 
-        await userStore.Received(1).UpdateUserAsync(user);
+        await authService.Received(1).UpdateUserAsyncMock(user, default);
     }
 
-    [Theory, MoreAutoData]
-    public async Task RefreshAsync_InvalidRefreshToken_FailureAuthResult(
-        string refreshToken,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task RefreshAsync_InvalidRefreshToken_FailureAuthResult()
     {
-        userStore.GetRefreshTokenByIdAsync(refreshToken)
+        var refreshToken = "dsajhdjkahsdjkhasdkjasjdasd";
+
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
+            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+        };
+
+        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
+
+        authService.GetRefreshTokenByIdAsyncMock(refreshToken, default)
             .Returns((null, null));
 
         var result = await authService.RefreshAsync(refreshToken);
@@ -177,15 +199,28 @@ public class FastAuthServiceTests
             .Contain(FastAuthErrorCodes.InvalidRefreshToken);
     }
 
-    [Theory, MoreAutoData]
-    public async Task RefreshAsync_ExpiredRefreshToken_FailureAuthResult(
-        FastUser user,
-        FastRefreshToken refreshToken,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task RefreshAsync_ExpiredRefreshToken_FailureAuthResult()
     {
-        refreshToken.ExpiresAt = DateTime.UtcNow - TimeSpan.FromHours(1);
-        userStore.GetRefreshTokenByIdAsync(refreshToken.Id!)
+        FastUser user = new()
+        {
+            Email = "test@test.com"
+        };
+        FastRefreshToken refreshToken = new()
+        {
+            Id = Guid.NewGuid().ToString(),
+            ExpiresAt = DateTime.UtcNow - TimeSpan.FromHours(1)
+        };
+
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
+            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+        };
+
+        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
+        authService.GetRefreshTokenByIdAsyncMock(refreshToken.Id!, default)
             .Returns((refreshToken, user));
 
         var result = await authService.RefreshAsync(refreshToken.Id!);
@@ -200,39 +235,51 @@ public class FastAuthServiceTests
             .Contain(FastAuthErrorCodes.ExpiredRefreshToken);
     }
 
-    [Theory, MoreAutoData]
-    public async Task RefreshAsync_ValidRefreshToken_SuccessAuthResult(
-        FastUser user,
-        FastRefreshToken refreshToken,
-        [Frozen] FastAuthOptions fastAuthOptions,
-        [Frozen] IFastUserStore<FastUser, FastRefreshToken, Guid> userStore,
-        FastAuthService<FastUser, FastRefreshToken, Guid> authService)
+    [Fact]
+    public async Task RefreshAsync_ValidRefreshToken_SuccessAuthResult()
     {
-        fastAuthOptions.UseRefreshToken = true;
-        fastAuthOptions.AccessTokenLifeSpan = TimeSpan.FromMinutes(15);
-        fastAuthOptions.RefreshTokenLifeSpan = TimeSpan.FromDays(15);
-        refreshToken.ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan;
+        FastUser user = new()
+        {
+            Email = "test@test.com"
+        };
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
+            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+        };
+        FastRefreshToken refreshToken = new()
+        {
+            Id = Guid.NewGuid().ToString(),
+            ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan
+        };
         SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
-        SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
+        fastAuthOptions.DefaultSigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
 
-        userStore.GetRefreshTokenByIdAsync(refreshToken.Id!)
+        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
+        authService.GetRefreshTokenByIdAsyncMock(refreshToken.Id!, default)
             .Returns((refreshToken, user));
 
-        userStore.CreateRefreshTokenAsync(user)
+        authService.CreateRefreshTokenAsyncMock(user, default)
             .Returns(refreshToken);
 
-        Claim[] claims = { new("Id", user.Id.ToString()) };
-        userStore.GetClaimsForUser(user)
+        List<Claim> claims = new() { new("Id", user.Id.ToString()) };
+        authService.GetClaimsForUser(user)
             .Returns(claims);
 
-        var result = await authService.RefreshAsync(refreshToken.Id!, signingCredentials);
+        var result = await authService.RefreshAsync(refreshToken.Id!);
 
         commonAssert(user, refreshToken, fastAuthOptions, securityKey, result);
 
-        await userStore.Received(1).RemoveRefreshTokenAsync(refreshToken);
+        await authService.Received(1).RemoveRefreshTokenAsyncMock(refreshToken, default);
     }
 
-    private static void commonAssert(FastUser user, FastRefreshToken refreshToken, FastAuthOptions fastAuthOptions, SymmetricSecurityKey securityKey, AuthResult<FastUser> result)
+    private static void commonAssert(
+        FastUser user,
+        FastRefreshToken refreshToken,
+        FastAuthOptions<FastUser, FastRefreshToken, Guid> fastAuthOptions,
+        SymmetricSecurityKey securityKey,
+        AuthResult<FastUser> result)
     {
         var successResult = result.Should().BeOfType<AuthResult<FastUser>.Success>().Which;
         successResult.RefreshToken.Should().Be(refreshToken.Id);
