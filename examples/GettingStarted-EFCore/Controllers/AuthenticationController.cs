@@ -30,12 +30,12 @@ namespace GettingStarted.Controllers
             {
                 Email = request.Email
             };
-            var createResult = await _authService.CreateUserAsync(user, request.Password);
+            var createResult = await _authService.CreateUser(user, request.Password);
             if (!createResult.Success)
             {
                 return BadRequest(createResult);
             }
-            var authResult = await _authService.AuthenticateAsync(user);
+            var authResult = await _authService.Authenticate(user);
             AuthResponse authRes = new(authResult.AccessToken, authResult.RefreshToken);
             return Ok(authRes);
         }
@@ -43,7 +43,7 @@ namespace GettingStarted.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> LoginUser([FromBody] LoginUserRequest request)
         {
-            var authResult = await _authService.AuthenticateAsync(request.Email, request.Password);
+            var authResult = await _authService.Authenticate(request.Email, request.Password);
             if (authResult is AuthResult<FastUser>.Success successResult)
             {
                 AuthResponse authRes = new(successResult.AccessToken, successResult.RefreshToken);
@@ -55,7 +55,7 @@ namespace GettingStarted.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromBody] string refreshToken)
         {
-            var authResult = await _authService.RefreshAsync(refreshToken);
+            var authResult = await _authService.Refresh(refreshToken);
             if (authResult is AuthResult<FastUser>.Success successResult)
             {
                 AuthResponse authRes = new(successResult.AccessToken, successResult.RefreshToken);

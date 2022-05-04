@@ -21,42 +21,65 @@ public static class Extensions
         return CreateFastUserIndexes<FastUser>(usersCollection, cancellationToken);
     }
 
-    public static void AddFastAuthWithMongo<TUser>(
+    public static void AddFastAuthWithMongo<TUser, TRefreshToken>(
         this IServiceCollection services, 
-        Action<MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>> optionAction)
+        Action<MongoFastAuthOptions<TUser, TRefreshToken>> optionAction)
         where TUser : FastUser, new()
+        where TRefreshToken : FastRefreshToken<TUser>, new()
     {
-        MongoFastAuthOptions<TUser, FastRefreshToken<TUser>> authOptions = new();
+        MongoFastAuthOptions<TUser, TRefreshToken> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
+        {
+            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+        }
         services.AddSingleton(authOptions);
-        services.AddSingleton<FastAuthOptions<TUser, FastRefreshToken<TUser>, string>>(authOptions);
-
-        services.AddScoped<
-            IFastUserStore<TUser, FastRefreshToken<TUser>, string>,
-            FastUserStore<TUser, FastRefreshToken<TUser>>>();
         
         services.AddScoped<
             IFastAuthService<TUser>,
             FastAuthService<TUser>>();
 
-        services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>, string>>(
+        services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>>>(
+            sp => sp.GetService<IFastAuthService<TUser>>()!);
+    }
+
+    public static void AddFastAuthWithMongo<TUser>(
+        this IServiceCollection services, 
+        Action<MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>> optionAction)
+        where TUser : FastUser, new()
+    {
+        MongoFastAuthOptions<TUser> authOptions = new();
+        optionAction(authOptions);
+        if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
+        {
+            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+        }
+        services.AddSingleton(authOptions);
+        services.AddSingleton<MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>>(authOptions);
+        
+        services.AddScoped<
+            IFastAuthService<TUser>,
+            FastAuthService<TUser>>();
+
+        services.AddScoped<IFastAuthService<TUser, FastRefreshToken<TUser>>>(
             sp => sp.GetService<IFastAuthService<TUser>>()!);
     }
 
     public static void AddFastAuthWithMongo(this IServiceCollection services, Action<MongoFastAuthOptions<FastUser, FastRefreshToken>> optionAction)
     {
-        MongoFastAuthOptions<FastUser, FastRefreshToken> authOptions = new();
+        MongoFastAuthOptions authOptions = new();
         optionAction(authOptions);
+        if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
+        {
+            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+        }
         services.AddSingleton(authOptions);
-        services.AddSingleton<FastAuthOptions<FastUser, FastRefreshToken, string>>(authOptions);
+        services.AddSingleton<MongoFastAuthOptions<FastUser, FastRefreshToken>>(authOptions);
 
-        services.AddScoped<
-            IFastUserStore<FastUser, FastRefreshToken, string>,
-            FastUserStore<FastUser, FastRefreshToken>>();
 
         services.AddScoped<IFastAuthService, FastAuthService>();
 
-        services.AddScoped<IFastAuthService<FastUser, FastRefreshToken, string>>(sp => sp.GetService<IFastAuthService>()!);
+        services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(sp => sp.GetService<IFastAuthService>()!);
     }
 
     public static TUser MapClaimsToFastUser<TUser>(this ClaimsPrincipal claimsPrincipal)

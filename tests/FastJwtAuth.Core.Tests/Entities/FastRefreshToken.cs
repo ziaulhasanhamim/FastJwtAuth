@@ -10,5 +10,6 @@ namespace FastJwtAuth.Core.Tests.Entities
         public Guid UserId { get; set; }
 
         public DateTime ExpiresAt { get; set; }
+        public DateTime CreatedAt { get; set ; }
     }
 }

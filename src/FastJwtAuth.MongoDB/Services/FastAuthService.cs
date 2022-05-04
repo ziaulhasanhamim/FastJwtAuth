@@ -1,9 +1,10 @@
 ﻿namespace FastJwtAuth.MongoDB.Services;
 
+using System.Buffers;
 using System.Security.Cryptography;
 
-
-public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, TRefreshToken, string>, IFastUserStore<TUser, TRefreshToken>
+public class FastAuthService<TUser, TRefreshToken> 
+    : FastAuthServiceBase<TUser, TRefreshToken, string>, IFastAuthService<TUser, TRefreshToken>
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
 {
@@ -12,7 +13,7 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
     private readonly IMongoCollection<TUser> _usersCollection;
     private readonly IMongoCollection<TRefreshToken> _refreshTokenCollection;
 
-    public FastUserStore(
+    public FastAuthService(
         MongoFastAuthOptions<TUser, TRefreshToken> authOptions, 
         IServiceProvider sp, 
         IFastUserValidator<TUser>? userValidator = null)
@@ -44,36 +45,41 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
         _refreshTokenCollection = _db.GetCollection<TRefreshToken>(_mongoAuthOptions.RefreshTokenCollectionName);
     }
 
-    public override async Task<TRefreshToken> CreateRefreshTokenAsync(TUser user, CancellationToken cancellationToken = default)
+    protected override Task addUser(TUser user, CancellationToken cancellationToken) =>
+        _usersCollection.InsertOneAsync(user, null, cancellationToken);
+
+    protected override async ValueTask<TRefreshToken> createRefreshToken(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
     {
-        var randomBytes = new byte[_mongoAuthOptions.RefreshTokenBytesLength];
+        var randomBytes = ArrayPool<byte>.Shared.Rent(tokenCreationOptions.RefreshTokenBytesLength);
+
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
 
+        var utcNow = DateTime.UtcNow;
         TRefreshToken refreshToken = new()
         {
             Id = Convert.ToBase64String(randomBytes),
-            ExpiresAt = DateTime.UtcNow.Add(_mongoAuthOptions.RefreshTokenLifeSpan),
+            CreatedAt = utcNow,
+            ExpiresAt = utcNow.Add(tokenCreationOptions.RefreshTokenLifeSpan),
             User = user
         };
+
+        ArrayPool<byte>.Shared.Return(randomBytes);
 
         await _refreshTokenCollection.InsertOneAsync(refreshToken, null, cancellationToken);
         return refreshToken;
     }
 
-    public override Task CreateUserAsync(TUser user, CancellationToken cancellationToken = default) =>
-        _usersCollection.InsertOneAsync(user, null, cancellationToken);
-
-    public override Task<bool> DoesNormalizedEmailExistAsync(string nomalizedEmail, CancellationToken cancellationToken = default)
+    protected override Task<bool> doesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
-            [nameof(FastUser.NormalizedEmail)] = nomalizedEmail
+            [nameof(FastUser.NormalizedEmail)] = normalizedEmail
         };
         return _usersCollection.Find(filter).AnyAsync(cancellationToken);
     }
 
-    public override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenByIdAsync(string id, CancellationToken cancellationToken = default)
+    protected override async Task<(TRefreshToken? RefreshToken, TUser? User)> getRefreshTokenById(string id, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -84,16 +90,16 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
         return (refreshToken, refreshToken?.User);
     }
 
-    public override Task<TUser?> GetUserByNormalizedEmailAsync(string normalizedUserIdentifier, CancellationToken cancellationToken = default)
+    protected override Task<TUser?> getUserByNormalizedEmail(string normalizedEmail, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
-            [nameof(FastUser.NormalizedEmail)] = normalizedUserIdentifier
+            [nameof(FastUser.NormalizedEmail)] = normalizedEmail
         };
         return _usersCollection.Find(filter).FirstOrDefaultAsync(cancellationToken)!;
     }
 
-    public override Task RemoveRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken = default)
+    protected override Task removeRefreshToken(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -102,12 +108,21 @@ public class FastUserStore<TUser, TRefreshToken> : FastUserStoreCommons<TUser, T
         return _refreshTokenCollection.DeleteOneAsync(filter, cancellationToken);
     }
 
-    public override Task UpdateUserAsync(TUser user, CancellationToken cancellationToken = default)
+    protected override Task updateUserLastLogin(TUser user, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
             [nameof(FastUser.Id)] = user.Id
         };
-        return _usersCollection.ReplaceOneAsync(filter, user, cancellationToken: cancellationToken);
+        var update = new BsonDocument()
+        {
+            [nameof(FastUser.LastLogin)] = user.LastLogin
+        };
+        return _usersCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
+
+    protected override Task commitDbChanges(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 }

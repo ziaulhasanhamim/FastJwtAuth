@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 public static class Extensions
 {
     public static void ConfigureAuthModels<TUser, TRefreshToken>(
-        this ModelBuilder builder, 
+        this ModelBuilder builder,
         EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions)
         where TUser : FastUser, new()
         where TRefreshToken : FastRefreshToken<TUser>, new()
@@ -27,7 +27,7 @@ public static class Extensions
     }
 
     public static void ConfigureAuthModels<TUser>(
-        this ModelBuilder builder, 
+        this ModelBuilder builder,
         EFCoreFastAuthOptions<TUser> authOptions)
         where TUser : FastUser, new()
     {
@@ -36,14 +36,14 @@ public static class Extensions
 
 
     public static void ConfigureAuthModels(
-        this ModelBuilder builder, 
+        this ModelBuilder builder,
         EFCoreFastAuthOptions authOptions)
     {
         ConfigureAuthModels<FastUser, FastRefreshToken>(builder, authOptions);
     }
 
     public static void AddFastAuthWithEFCore<TUser, TRefreshToken, TDbContext>(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<EFCoreFastAuthOptions<TUser, TRefreshToken>> optionAction)
         where TUser : FastUser, new()
         where TRefreshToken : FastRefreshToken<TUser>, new()
@@ -51,6 +51,10 @@ public static class Extensions
     {
         EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
+        {
+            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+        }
         services.AddSingleton(authOptions);
 
         services.AddScoped<
@@ -59,16 +63,19 @@ public static class Extensions
     }
 
     public static void AddFastAuthWithEFCore<TUser, TDbContext>(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<EFCoreFastAuthOptions<TUser>> optionAction)
         where TUser : FastUser, new()
         where TDbContext : DbContext
     {
         EFCoreFastAuthOptions<TUser> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
+        {
+            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+        }
         services.AddSingleton(authOptions);
         services.AddSingleton<EFCoreFastAuthOptions<TUser, FastRefreshToken<TUser>>>(authOptions);
-
 
         services.AddScoped<
             IFastAuthService<TUser>,
@@ -79,15 +86,18 @@ public static class Extensions
     }
 
     public static void AddFastAuthWithEFCore<TDbContext>(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<EFCoreFastAuthOptions> optionAction)
         where TDbContext : DbContext
     {
         EFCoreFastAuthOptions authOptions = new();
         optionAction(authOptions);
+        if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
+        {
+            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+        }
         services.AddSingleton(authOptions);
         services.AddSingleton<EFCoreFastAuthOptions<FastUser, FastRefreshToken>>(authOptions);
-        
 
         services.AddScoped<IFastAuthService, FastAuthService<TDbContext>>();
 

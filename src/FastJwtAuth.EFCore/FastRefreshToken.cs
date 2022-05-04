@@ -14,6 +14,8 @@ public class FastRefreshToken<TUser> : IFastRefreshToken<Guid>
     [Required, ForeignKey(nameof(UserId))]
     public TUser? User { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
     [Required]
     public DateTime ExpiresAt { get; set; }
 }

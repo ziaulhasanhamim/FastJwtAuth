@@ -26,16 +26,23 @@ public class FastAuthServiceTests
 
         var userValidator = Substitute.For<IFastUserValidator<FastUser>>();
 
-        userValidator.ValidateAsync(user, password)
+        userValidator.Validate(user, password)
             .Returns((false, new() { "SomeOtherError" }));
 
-        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(userValidator);
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
+        };
+
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions, userValidator);
 
         authService.Configure()
-            .DoesNormalizedEmailExistAsyncMock(authService.NormalizeText(user.Email), default)
+            .DoesNormalizedEmailExistMock(authService.NormalizeText(user.Email), default)
             .Returns(true);
 
-        var result = await authService.CreateUserAsync(user, password);
+        var result = await authService.CreateUser(user, password);
 
         result.Success.Should().BeFalse();
         result.ErrorCodes.Should().HaveCount(3);
@@ -55,23 +62,21 @@ public class FastAuthServiceTests
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
-            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
-            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
         };
         FastRefreshToken refreshToken = new()
         {
             Id = Guid.NewGuid().ToString(),
-            ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan
+            ExpiresAt = DateTime.UtcNow + fastAuthOptions.DefaultTokenCreationOptions.RefreshTokenLifeSpan
         };
-        SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
-        fastAuthOptions.DefaultSigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
-
+        
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
-        authService.Configure().CreateRefreshTokenAsyncMock(user, default)
+        authService.Configure().CreateRefreshTokenMock(user, default)
             .Returns(refreshToken);
 
-        var result = await authService.CreateUserAsync(user, password);
+        var result = await authService.CreateUser(user, password);
 
         result.ErrorCodes.Should().BeNull();
         result.Success.Should().BeTrue();
@@ -81,7 +86,8 @@ public class FastAuthServiceTests
         user.LastLogin.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
 
         authService.Received(1).HashPassword(password);
-        await authService.Received(1).AddUserAsyncMock(user, default);
+        await authService.Received(1).AddUserMock(user, default);
+        await authService.Received(1).CommitDbChangesMock(default);
     }
 
     [Fact]
@@ -89,9 +95,16 @@ public class FastAuthServiceTests
     {
         var userIdentifier = "test@mail.com";
         var password = "testpass";
-        var authService = Substitute.For<FastAuthServiceMock>();
 
-        var result = await authService.AuthenticateAsync(userIdentifier, password);
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
+        };
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
+
+        var result = await authService.Authenticate(userIdentifier, password);
 
         var failureResult = result.Should().BeOfType<AuthResult<FastUser>.Failure>()
             .Which;
@@ -105,22 +118,37 @@ public class FastAuthServiceTests
     {
         FastUser user = new()
         {
-            Email = "teSt@test.com"
+            Email = "teSt@test.com",
+            PasswordHash = "hashedpass"
         };
         var password = "testpass";
-        var authService = Substitute.For<FastAuthServiceMock>();
-        authService.GetUserByNormalizedEmailAsyncMock(authService.NormalizeText(user.Email)!, default)
+
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
+        };
+
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
+
+        var normalizedEmail = authService.NormalizeText(user.Email);
+
+        authService.Configure()
+            .VerifyPassword(password, user.PasswordHash!)
+            .Returns(false);
+
+        authService.Configure()
+            .GetUserByNormalizedEmailMock(normalizedEmail, default)
             .Returns(user);
 
-        var result = await authService.AuthenticateAsync(user.Email!, password);
+        var result = await authService.Authenticate(user.Email!, password);
 
         var failureResult = result.Should().BeOfType<AuthResult<FastUser>.Failure>()
             .Which;
 
         failureResult.ErrorCodes.Should().HaveCount(1);
         failureResult.ErrorCodes.Should().Contain(FastAuthErrorCodes.WrongPassword);
-
-        authService.Received(1).VerifyPassword(password, user.PasswordHash!);
     }
 
     [Fact]
@@ -132,62 +160,61 @@ public class FastAuthServiceTests
         };
         var password = "testpass";
 
+        
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
-            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
-            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
         };
 
         FastRefreshToken refreshToken = new()
         {
-            ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan
+            Id = "refreshtokenId",
+            ExpiresAt = DateTime.UtcNow + fastAuthOptions.DefaultTokenCreationOptions.RefreshTokenLifeSpan
         };
 
-        SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
-        fastAuthOptions.DefaultSigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
-
-        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
-        authService.GetUserByNormalizedEmailAsyncMock(authService.NormalizeText(user.Email!), default)
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
+        authService.Configure()
+            .GetUserByNormalizedEmailMock(authService.NormalizeText(user.Email!), default)
             .Returns(user);
 
-        authService.VerifyPassword(password, user.PasswordHash!)
+        authService.Configure()
+            .VerifyPassword(password, user.PasswordHash!)
             .Returns(true);
 
-        authService.CreateRefreshTokenAsyncMock(user, default)
+        authService.CreateRefreshTokenMock(user, default)
             .Returns(refreshToken);
 
-        List<Claim> claims = new() { new("Id", user.Id.ToString()) };
-        authService.GetClaimsForUser(user)
-            .Returns(claims);
+        var result = await authService.Authenticate(user.Email!, password);
 
-        var result = await authService.AuthenticateAsync(user.Email!, password);
-
-        commonAssert(user, refreshToken, fastAuthOptions, securityKey, result);
+        commonAssert(user, refreshToken, fastAuthOptions, result);
 
         user.LastLogin.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
 
-        await authService.Received(1).UpdateUserAsyncMock(user, default);
+        await authService.Received(1).UpdateUserLastLoginMock(user, default);
+        await authService.Received(1).CommitDbChangesMock(default);
     }
 
     [Fact]
     public async Task RefreshAsync_InvalidRefreshToken_FailureAuthResult()
     {
-        var refreshToken = "dsajhdjkahsdjkhasdkjasjdasd";
+        var refreshToken = "refreshtoken-string";
 
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
-            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
-            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
         };
 
-        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
-        authService.GetRefreshTokenByIdAsyncMock(refreshToken, default)
+        authService.Configure()
+            .GetRefreshTokenByIdMock(refreshToken, default)
             .Returns((null, null));
 
-        var result = await authService.RefreshAsync(refreshToken);
+        var result = await authService.Refresh(refreshToken);
 
         result.Should()
             .BeOfType<AuthResult<FastUser>.Failure>()
@@ -215,15 +242,16 @@ public class FastAuthServiceTests
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
-            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
-            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
         };
 
-        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
-        authService.GetRefreshTokenByIdAsyncMock(refreshToken.Id!, default)
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
+        authService.Configure()
+            .GetRefreshTokenByIdMock(refreshToken.Id!, default)
             .Returns((refreshToken, user));
 
-        var result = await authService.RefreshAsync(refreshToken.Id!);
+        var result = await authService.Refresh(refreshToken.Id!);
 
         result.Should()
             .BeOfType<AuthResult<FastUser>.Failure>()
@@ -245,58 +273,58 @@ public class FastAuthServiceTests
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
-            AccessTokenLifeSpan = TimeSpan.FromMinutes(15),
-            RefreshTokenLifeSpan = TimeSpan.FromDays(15)
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key")
         };
         FastRefreshToken refreshToken = new()
         {
             Id = Guid.NewGuid().ToString(),
-            ExpiresAt = DateTime.UtcNow + fastAuthOptions.RefreshTokenLifeSpan
+            ExpiresAt = DateTime.UtcNow + fastAuthOptions.DefaultTokenCreationOptions.RefreshTokenLifeSpan
         };
-        SymmetricSecurityKey securityKey = new(Encoding.Unicode.GetBytes("dasdbasdhgaysgduyasd7623t3t276t326t362t3dsgagdgad"));
-        fastAuthOptions.DefaultSigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
-
-        var authService = Substitute.For<FastAuthServiceMock>(fastAuthOptions);
-        authService.GetRefreshTokenByIdAsyncMock(refreshToken.Id!, default)
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
+        authService.Configure()
+            .GetRefreshTokenByIdMock(refreshToken.Id!, default)
             .Returns((refreshToken, user));
 
-        authService.CreateRefreshTokenAsyncMock(user, default)
+        authService.CreateRefreshTokenMock(user, default)
             .Returns(refreshToken);
 
         List<Claim> claims = new() { new("Id", user.Id.ToString()) };
-        authService.GetClaimsForUser(user)
-            .Returns(claims);
 
-        var result = await authService.RefreshAsync(refreshToken.Id!);
+        var result = await authService.Refresh(refreshToken.Id!);
 
-        commonAssert(user, refreshToken, fastAuthOptions, securityKey, result);
+        commonAssert(user, refreshToken, fastAuthOptions, result);
 
-        await authService.Received(1).RemoveRefreshTokenAsyncMock(refreshToken, default);
+        await authService.Received(1).RemoveRefreshTokenMock(refreshToken, default);
+        await authService.Received(1).CommitDbChangesMock(default);
     }
 
     private static void commonAssert(
         FastUser user,
         FastRefreshToken refreshToken,
         FastAuthOptions<FastUser, FastRefreshToken, Guid> fastAuthOptions,
-        SymmetricSecurityKey securityKey,
         AuthResult<FastUser> result)
     {
         var successResult = result.Should().BeOfType<AuthResult<FastUser>.Success>().Which;
         successResult.RefreshToken.Should().Be(refreshToken.Id);
         successResult.RefreshTokenExpiresAt.Should().Be(refreshToken.ExpiresAt);
         successResult.AccessTokenExpiresAt.Should().BeCloseTo(
-            DateTimeOffset.UtcNow.Add(fastAuthOptions.AccessTokenLifeSpan),
+            DateTimeOffset.UtcNow.Add(fastAuthOptions.DefaultTokenCreationOptions!.AccessTokenLifeSpan),
             TimeSpan.FromMinutes(1));
         TokenValidationParameters validationParams = new()
         {
-            IssuerSigningKey = securityKey,
+            IssuerSigningKey = fastAuthOptions.DefaultTokenCreationOptions!.SigningCredentials!.Key,
             ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
             ValidateLifetime = true,
             ValidateIssuer = false,
-            ValidateAudience = false
+            ValidateAudience = false,
         };
-        JwtSecurityTokenHandler tokenHandler = new();
+        JwtSecurityTokenHandler tokenHandler = new()
+        {
+            MapInboundClaims = false
+        };
         var claimPrinciple = tokenHandler.ValidateToken(successResult.AccessToken, validationParams, out _);
-        claimPrinciple.Claims.First(c => c.Type == "Id").Value.Should().Be(user.Id.ToString());
+        claimPrinciple.Claims.First(c => c.Type == JwtRegisteredClaimNames.Jti).Value.Should().Be(user.Id.ToString());
+        claimPrinciple.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value.Should().Be(user.Email);
     }
 }

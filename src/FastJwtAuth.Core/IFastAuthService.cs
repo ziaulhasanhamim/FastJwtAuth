@@ -20,17 +20,17 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     /// <param name="password">Password for the user</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="CreateUserResult"/> containing error codes if there is any error</returns>
-    Task<CreateUserResult> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default);
+    Task<CreateUserResult> CreateUser(TUser user, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates an user user
     /// </summary>
     /// <param name="email">Email of user</param>
     /// <param name="password">Password of user</param>
-    /// <param name="signingCredentials">SigningCredentials for jwt signing it will be used. If none default one will be used from FastAuthOptions</param>
+    /// <param name="tokenCreationOptions"><see cref="TokenCreationOptions"/> containing required information for jwt signing. If none default one will be used from FastAuthOptions</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if login was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
-    Task<AuthResult<TUser>> AuthenticateAsync(string email, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>> Authenticate(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates an user user
@@ -39,22 +39,22 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     /// <param name="password">Password of user</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if login was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
-    Task<AuthResult<TUser>> AuthenticateAsync(string email, string password, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>> Authenticate(string email, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates an user user
     /// </summary>
     /// <param name="user">User entity</param>
-    /// <param name="signingCredentials">SigningCredentials for jwt signing it will be used. If none default one will be used from FastAuthOptions</param>
+    /// <param name="tokenCreationOptions"><see cref="TokenCreationOptions"/> containing required information for jwt signing. If none default one will be used from FastAuthOptions</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
-    Task<AuthResult<TUser>.Success> AuthenticateAsync(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>.Success> Authenticate(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates an user user
     /// </summary>
     /// <param name="user">User entity</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
-    Task<AuthResult<TUser>.Success> AuthenticateAsync(TUser user, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>.Success> Authenticate(TUser user, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Refresh and get new a refresh token and access token
@@ -62,16 +62,16 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     /// <param name="refreshToken">The user entity</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if refresh was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
-    Task<AuthResult<TUser>> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>> Refresh(string refreshToken, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Refresh and get new a refresh token and access token
     /// </summary>
     /// <param name="refreshToken">The user entity</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
-    /// <param name="signingCredentials">SigningCredentials for jwt signing it will be used. If none default one will be used from FastAuthOptions</param>
+    /// <param name="tokenCreationOptions"><see cref="TokenCreationOptions"/> containing required information for jwt signing. If none default one will be used from FastAuthOptions</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if refresh was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
-    Task<AuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>> Refresh(string refreshToken, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 
     string HashPassword(string password);
 

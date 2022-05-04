@@ -59,9 +59,7 @@ namespace GettingStarted
 
                 options.AddSecurityRequirement(securityRequirement);
             });
-
             
-
             services.AddAuthentication("JwtAuth")
                 .AddJwtBearer("JwtAuth", options =>
                 {
@@ -79,11 +77,8 @@ namespace GettingStarted
 
             services.AddFastAuthWithEFCore<ApplicationDbContext>(options =>
             {
-                SymmetricSecurityKey securityKey = new(
-                Encoding.Unicode.GetBytes("123456789abcdefgfhijklmnopqrstuvwxyz"));
-                SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
                 options.UseRefreshToken = true;
-                options.DefaultSigningCredentials = signingCredentials;
+                options.UseDefaultCredentials("123456789abcdefgfhijklmnopqrstuvwxyz");
             });
 
             services.AddMiniProfiler(options => options.RouteBasePath = "/profiler")

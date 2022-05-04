@@ -7,7 +7,7 @@ public class FastAuthService<TUser, TDbContext> : FastAuthService<TUser, FastRef
     public FastAuthService(
         TDbContext dbContext,
         EFCoreFastAuthOptions<TUser> authOptions,
-        IFastUserValidator<TUser> userValidator)
+        IFastUserValidator<TUser>? userValidator = null)
         : base(dbContext, authOptions, userValidator)
     {
     }
@@ -19,7 +19,7 @@ public class FastAuthService<TDbContext> : FastAuthService<FastUser, FastRefresh
     public FastAuthService(
         TDbContext dbContext,
         EFCoreFastAuthOptions authOptions,
-        IFastUserValidator<FastUser> userValidator)
+        IFastUserValidator<FastUser>? userValidator = null)
         : base(dbContext, authOptions, userValidator)
     {
     }

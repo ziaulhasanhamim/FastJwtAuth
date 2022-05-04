@@ -82,8 +82,6 @@ public class Startup
             options.AddSecurityRequirement(securityRequirement);
         }); // for swagger support
 
-
-
         services.AddAuthentication("JwtAuth")
             .AddJwtBearer("JwtAuth", options =>
             {
@@ -101,11 +99,8 @@ public class Startup
 
         services.AddFastAuthWithEFCore<ApplicationDbContext>(options =>
         {
-            SymmetricSecurityKey securityKey = new(
-            Encoding.Unicode.GetBytes("123456789abcdefgfhijklmnopqrstuvwxyz"));
-            SigningCredentials signingCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
             options.UseRefreshToken = true;
-            options.DefaultSigningCredentials = signingCredentials;
+            options.UseDefaultCredentials("123456789abcdefgfhijklmnopqrstuvwxyz");
         }); // Default user auth setup with refresh token
     }
 

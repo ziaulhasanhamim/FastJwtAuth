@@ -8,19 +8,23 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
     where TRefreshToken : class, IFastRefreshToken<TUserKey>, new()
 {
     protected readonly FastAuthOptions<TUser, TRefreshToken, TUserKey> _authOptions;
-    protected readonly IFastUserValidator<TUser> _userValidator;
+    protected readonly IFastUserValidator<TUser>? _userValidator;
 
-    public FastAuthServiceBase(FastAuthOptions<TUser, TRefreshToken, TUserKey> authOptions, IFastUserValidator<TUser> userValidator)
+    private readonly static EmailAddressAttribute _emailValidator = new();
+    private readonly static JwtSecurityTokenHandler _jwtSecurityTokenHandler = new();
+
+    public FastAuthServiceBase(FastAuthOptions<TUser, TRefreshToken, TUserKey> authOptions, IFastUserValidator<TUser>? userValidator)
     {
         _authOptions = authOptions;
         _userValidator = userValidator;
     }
 
-    public async Task<CreateUserResult> CreateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+    public async Task<CreateUserResult> CreateUser(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        user.NormalizedEmail ??= NormalizeText(user.Email ?? throw new ArgumentNullException("user.Email"));
+        ArgumentNullException.ThrowIfNull(user.Email);
+        user.NormalizedEmail ??= NormalizeText(user.Email);
 
-        var validationErrors = await validateUserAsync(user, password, cancellationToken);
+        var validationErrors = await validateUser(user, password, cancellationToken);
         if (validationErrors is not null)
         {
             return new(false, validationErrors);
@@ -31,13 +35,15 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         user.CreatedAt = DateTime.UtcNow;
         user.LastLogin = user.CreatedAt;
 
-        await addUserAsync(user, cancellationToken);
+        await addUser(user, cancellationToken);
+        await commitDbChanges(cancellationToken);
         return new(true, null);
     }
 
-    public async Task<AuthResult<TUser>> AuthenticateAsync(string email, string password, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
+    public async Task<AuthResult<TUser>> Authenticate(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)
     {
-        var user = await getUserByEmailAsync(email, cancellationToken);
+        ArgumentNullException.ThrowIfNull(tokenCreationOptions.SigningCredentials);
+        var user = await getUserByEmail(email, cancellationToken);
         if (user is null)
         {
             List<string> validationErrors = new() { FastAuthErrorCodes.WrongEmail };
@@ -52,39 +58,52 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         }
 
         user.LastLogin = DateTime.UtcNow;
-        await updateUserAsync(user, cancellationToken);
+        await updateUserLastLogin(user, cancellationToken);
 
-        return await generateTokens(user!, signingCredentials, cancellationToken);
+        var result = await generateTokens(user!, tokenCreationOptions, cancellationToken);
+    
+        await commitDbChanges(cancellationToken);
+
+        return result;
     }
 
-    public Task<AuthResult<TUser>> AuthenticateAsync(string email, string password, CancellationToken cancellationToken = default)
+    public Task<AuthResult<TUser>> Authenticate(string email, string password, CancellationToken cancellationToken = default)
     {
-        return AuthenticateAsync(email, password, null, cancellationToken);
-    }
-
-    public async Task<AuthResult<TUser>.Success> AuthenticateAsync(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
-    {
-        user.LastLogin = DateTime.UtcNow;
-        await updateUserAsync(user, cancellationToken);
-        return await generateTokens(user!, signingCredentials, cancellationToken);
-    }
-
-    public Task<AuthResult<TUser>.Success> AuthenticateAsync(TUser user, CancellationToken cancellationToken = default)
-    {
-        return AuthenticateAsync(user, null, cancellationToken);
-    }
-
-    public async Task<AuthResult<TUser>> RefreshAsync(string refreshToken, SigningCredentials? signingCredentials, CancellationToken cancellationToken = default)
-    {
-        if (refreshToken is null)
+        if (_authOptions.DefaultTokenCreationOptions is null)
         {
-            throw new ArgumentNullException(nameof(refreshToken));
+            throw new ArgumentNullException(nameof(_authOptions.DefaultTokenCreationOptions), "No TokenCreationOptions was provided and DefaultTokenCreationOptions on FastAuthOptions is also null");
         }
+        return Authenticate(email, password, _authOptions.DefaultTokenCreationOptions, cancellationToken);
+    }
+
+    public async Task<AuthResult<TUser>.Success> Authenticate(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tokenCreationOptions.SigningCredentials);
+        user.LastLogin = DateTime.UtcNow;
+        await updateUserLastLogin(user, cancellationToken);
+        var result = await generateTokens(user!, tokenCreationOptions, cancellationToken);
+        await commitDbChanges(cancellationToken);
+        return result;
+    }
+
+    public Task<AuthResult<TUser>.Success> Authenticate(TUser user, CancellationToken cancellationToken = default)
+    {
+        if (_authOptions.DefaultTokenCreationOptions is null)
+        {
+            throw new ArgumentNullException(nameof(_authOptions.DefaultTokenCreationOptions), "No TokenCreationOptions was provided and DefaultTokenCreationOptions on FastAuthOptions is also null");
+        }
+        return Authenticate(user, _authOptions.DefaultTokenCreationOptions, cancellationToken);
+    }
+
+    public async Task<AuthResult<TUser>> Refresh(string refreshToken, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tokenCreationOptions.SigningCredentials);
+        
         if (!_authOptions.UseRefreshToken)
         {
             throw new NotImplementedException("FastJwtAuth.Core.Options.FastAuthOptions.UseRefreshToken is false. make it true for refresh");
         }
-        var (refreshTokenEntity, user) = await getRefreshTokenByIdAsync(refreshToken, cancellationToken);
+        var (refreshTokenEntity, user) = await getRefreshTokenById(refreshToken, cancellationToken);
         if (refreshTokenEntity is null)
         {
             return new AuthResult<TUser>.Failure(new() { FastAuthErrorCodes.InvalidRefreshToken });
@@ -93,37 +112,40 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         {
             return new AuthResult<TUser>.Failure(new() { FastAuthErrorCodes.ExpiredRefreshToken });
         }
-        await removeRefreshTokenAsync(refreshTokenEntity, cancellationToken);
-        var succResult = await generateTokens(user!, signingCredentials, cancellationToken);
-        return succResult;
+        await removeRefreshToken(refreshTokenEntity, cancellationToken);
+        var successResult = await generateTokens(user!, tokenCreationOptions, cancellationToken);
+        await commitDbChanges(cancellationToken);
+        return successResult;
     }
 
-    public Task<AuthResult<TUser>> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
+    public Task<AuthResult<TUser>> Refresh(string refreshToken, CancellationToken cancellationToken = default)
     {
-        return RefreshAsync(refreshToken, null, cancellationToken);
+        if (_authOptions.DefaultTokenCreationOptions is null)
+        {
+            throw new ArgumentNullException(nameof(_authOptions.DefaultTokenCreationOptions), "No TokenCreationOptions was provided and DefaultTokenCreationOptions on FastAuthOptions is also null");
+        }
+        return Refresh(refreshToken, _authOptions.DefaultTokenCreationOptions, cancellationToken);
     }
 
-    private async Task<AuthResult<TUser>.Success> generateTokens(TUser user, SigningCredentials? signingCredentials, CancellationToken cancellationToken)
+    private async Task<AuthResult<TUser>.Success> generateTokens(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
     {
         string? refreshToken = null;
         DateTime? refreshTokenExpireDate = null;
         if (_authOptions.UseRefreshToken)
         {
-            TRefreshToken refreshTokenEntity = await createRefreshTokenAsync(user, cancellationToken);
+            TRefreshToken refreshTokenEntity = await createRefreshToken(user, tokenCreationOptions, cancellationToken);
             refreshToken = refreshTokenEntity.Id;
             refreshTokenExpireDate = refreshTokenEntity.ExpiresAt;
         }
-        signingCredentials ??= _authOptions.DefaultSigningCredentials;
-        if (signingCredentials is null)
-        {
-            throw new ArgumentException("No SigningCredentials was provided and DefaultSigningCredentials on FastAuthOptions is also null");
-        }
+        
         var claims = GetClaimsForUser(user);
         JwtSecurityToken securityToken = new(
             claims: claims,
-            expires: DateTime.UtcNow.Add(_authOptions.AccessTokenLifeSpan),
-            signingCredentials: signingCredentials);
-        var accessToken = new JwtSecurityTokenHandler().WriteToken(securityToken);
+            expires: DateTime.UtcNow.Add(tokenCreationOptions.AccessTokenLifeSpan),
+            signingCredentials: tokenCreationOptions.SigningCredentials,
+            issuer: tokenCreationOptions.Issuer,
+            audience: tokenCreationOptions.Audience);
+        var accessToken = _jwtSecurityTokenHandler.WriteToken(securityToken);
         return new(
             accessToken,
             securityToken.ValidTo,
@@ -132,17 +154,17 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
             user);
     }
 
-    protected virtual async ValueTask<List<string>?> validateUserAsync(TUser user, string password, CancellationToken cancellationToken = default)
+    protected virtual async ValueTask<List<string>?> validateUser(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(user.Email);
-        ArgumentNullException.ThrowIfNull(user.NormalizedEmail);
-        ArgumentNullException.ThrowIfNull(password);
+        Guard.IsNotNull(user.Email);
+        Guard.IsNotNull(user.NormalizedEmail);
+        Guard.IsNotNull(password);
 
         List<string>? errors = null;
         bool complete = false;
         if (_userValidator is not null)
         {
-            (complete, errors) = await _userValidator.ValidateAsync(user, password);
+            (complete, errors) = await _userValidator.Validate(user, password);
         }
         if (complete)
         {
@@ -154,8 +176,7 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
             errors ??= new();
             errors.Add(FastAuthErrorCodes.PasswordVeryShort);
         }
-        var emailValidator = new EmailAddressAttribute();
-        var emailValid = emailValidator.IsValid(user.Email);
+        var emailValid = _emailValidator.IsValid(user.Email);
         if (!emailValid)
         {
             errors ??= new();
@@ -163,7 +184,7 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         }
         else
         {
-            var emailExists = await doesNormalizedEmailExistAsync(user.NormalizedEmail!, cancellationToken);
+            var emailExists = await doesNormalizedEmailExist(user.NormalizedEmail!, cancellationToken);
             if (emailExists)
             {
                 errors ??= new();
@@ -178,13 +199,13 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
 
     public virtual string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password);
 
-    protected Task<TUser?> getUserByEmailAsync(string email, CancellationToken cancellationToken = default)
+    protected Task<TUser?> getUserByEmail(string email, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeText(email);
-        return getUserByNormalizedEmailAsync(email, cancellationToken);
+        return getUserByNormalizedEmail(normalizedEmail, cancellationToken);
     }
 
-    protected abstract Task<TUser?> getUserByNormalizedEmailAsync(string email, CancellationToken cancellationToken);
+    protected abstract Task<TUser?> getUserByNormalizedEmail(string normalizedEmail, CancellationToken cancellationToken);
 
     public virtual List<Claim> GetClaimsForUser(TUser user)
     {
@@ -194,27 +215,29 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
             new(JwtRegisteredClaimNames.Email, user.Email!),
             new(nameof(IFastUser<Guid>.CreatedAt), user.CreatedAt.ToString()!)
         };
-        _authOptions.OnClaimsGeneration?.Invoke(claims, user);
+        _authOptions.GenerateClaims?.Invoke(claims, user);
         return claims;
     }
 
     protected virtual Task<bool> doesEmailExist(string email, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = NormalizeText(email);
-        return doesNormalizedEmailExistAsync(normalizedEmail, cancellationToken);
+        return doesNormalizedEmailExist(normalizedEmail, cancellationToken);
     }
 
     public string NormalizeText(string text) => text.Normalize().ToUpperInvariant();
 
-    protected abstract Task updateUserAsync(TUser user, CancellationToken cancellationToken);
+    protected abstract Task updateUserLastLogin(TUser user, CancellationToken cancellationToken);
 
-    protected abstract Task removeRefreshTokenAsync(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken);
+    protected abstract Task removeRefreshToken(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken);
 
-    protected abstract Task<(TRefreshToken? RefreshToken, TUser? User)> getRefreshTokenByIdAsync(string id, CancellationToken cancellationToken);
+    protected abstract Task<(TRefreshToken? RefreshToken, TUser? User)> getRefreshTokenById(string id, CancellationToken cancellationToken);
 
-    protected abstract Task<TRefreshToken> createRefreshTokenAsync(TUser user, CancellationToken cancellationToken);
+    protected abstract ValueTask<TRefreshToken> createRefreshToken(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken);
 
-    protected abstract Task addUserAsync(TUser user, CancellationToken cancellationToken);
+    protected abstract Task addUser(TUser user, CancellationToken cancellationToken);
 
-    protected abstract Task<bool> doesNormalizedEmailExistAsync(string normalizedEmail, CancellationToken cancellationToken);
+    protected abstract Task<bool> doesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken);
+
+    protected abstract Task commitDbChanges(CancellationToken cancellationToken);
 }

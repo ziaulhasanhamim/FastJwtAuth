@@ -29,52 +29,59 @@ public abstract class FastAuthServiceMock : FastAuthServiceBase<FastUser, FastRe
     {
     }
 
-    protected override Task addUserAsync(FastUser user, CancellationToken cancellationToken)
+    protected override Task addUser(FastUser user, CancellationToken cancellationToken)
     {
-        return AddUserAsyncMock(user, cancellationToken);
+        return AddUserMock(user, cancellationToken);
     }
 
-    public abstract Task AddUserAsyncMock(FastUser user, CancellationToken cancellationToken);
+    public abstract Task AddUserMock(FastUser user, CancellationToken cancellationToken);
 
-    protected override Task<FastRefreshToken> createRefreshTokenAsync(FastUser user, CancellationToken cancellationToken)
+    protected override async ValueTask<FastRefreshToken> createRefreshToken(FastUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
     {
-        return CreateRefreshTokenAsyncMock(user, cancellationToken);
+        return await CreateRefreshTokenMock(user, cancellationToken);
     }
 
-    public abstract Task<FastRefreshToken> CreateRefreshTokenAsyncMock(FastUser user, CancellationToken cancellationToken);
+    public abstract Task<FastRefreshToken> CreateRefreshTokenMock(FastUser user, CancellationToken cancellationToken);
 
-    protected override Task<bool> doesNormalizedEmailExistAsync(string normalizedEmail, CancellationToken cancellationToken)
+    protected override Task<bool> doesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken)
     {
-        return DoesNormalizedEmailExistAsyncMock(normalizedEmail, cancellationToken);
+        return DoesNormalizedEmailExistMock(normalizedEmail, cancellationToken);
     }
 
-    public abstract Task<bool> DoesNormalizedEmailExistAsyncMock(string normalizedEmail, CancellationToken cancellationToken);
+    public abstract Task<bool> DoesNormalizedEmailExistMock(string normalizedEmail, CancellationToken cancellationToken);
 
-    protected override Task<(FastRefreshToken? RefreshToken, FastUser? User)> getRefreshTokenByIdAsync(string id, CancellationToken cancellationToken)
+    protected override Task<(FastRefreshToken? RefreshToken, FastUser? User)> getRefreshTokenById(string id, CancellationToken cancellationToken)
     {
-        return GetRefreshTokenByIdAsyncMock(id, cancellationToken);
+        return GetRefreshTokenByIdMock(id, cancellationToken);
     }
 
-    public abstract Task<(FastRefreshToken? RefreshToken, FastUser? User)> GetRefreshTokenByIdAsyncMock(string id, CancellationToken cancellationToken);
+    public abstract Task<(FastRefreshToken? RefreshToken, FastUser? User)> GetRefreshTokenByIdMock(string id, CancellationToken cancellationToken);
 
-    protected override Task<FastUser?> getUserByNormalizedEmailAsync(string email, CancellationToken cancellationToken)
+    protected override Task<FastUser?> getUserByNormalizedEmail(string email, CancellationToken cancellationToken)
     {
-        return GetUserByNormalizedEmailAsyncMock(email, cancellationToken);
+        return GetUserByNormalizedEmailMock(email, cancellationToken);
     }
 
-    public abstract Task<FastUser?> GetUserByNormalizedEmailAsyncMock(string email, CancellationToken cancellationToken);
+    public abstract Task<FastUser?> GetUserByNormalizedEmailMock(string email, CancellationToken cancellationToken);
 
-    protected override Task removeRefreshTokenAsync(FastRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
+    protected override Task removeRefreshToken(FastRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
     {
-        return RemoveRefreshTokenAsyncMock(refreshTokenEntity, cancellationToken);
+        return RemoveRefreshTokenMock(refreshTokenEntity, cancellationToken);
     }
 
-    public abstract Task RemoveRefreshTokenAsyncMock(FastRefreshToken refreshTokenEntity, CancellationToken cancellationToken);
+    public abstract Task RemoveRefreshTokenMock(FastRefreshToken refreshTokenEntity, CancellationToken cancellationToken);
 
-    protected override Task updateUserAsync(FastUser user, CancellationToken cancellationToken)
+    protected override Task updateUserLastLogin(FastUser user, CancellationToken cancellationToken)
     {
-        return UpdateUserAsyncMock(user, cancellationToken);
+        return UpdateUserLastLoginMock(user, cancellationToken);
     }
 
-    public abstract Task UpdateUserAsyncMock(FastUser user, CancellationToken cancellationToken);
+    public abstract Task UpdateUserLastLoginMock(FastUser user, CancellationToken cancellationToken);
+
+    protected override Task commitDbChanges(CancellationToken cancellationToken)
+    {
+        return CommitDbChangesMock(cancellationToken);
+    }
+
+    public abstract Task CommitDbChangesMock(CancellationToken cancellationToken);
 }

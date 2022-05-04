@@ -7,7 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<PackageId>FastJwtAuth.Core</PackageId>
 		<Title>FastJwtAuth</Title>
-		<Version>0.4.0</Version>
+		<Version>0.5.0</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
 		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -26,6 +26,7 @@
 	
 	<ItemGroup>
 	  <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
+	  <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0-preview3" />
 	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.12.2" />
 	</ItemGroup>
 

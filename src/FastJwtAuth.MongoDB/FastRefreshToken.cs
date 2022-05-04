@@ -18,6 +18,8 @@ public class FastRefreshToken<TUser> : IFastRefreshToken<string>
 
     public TUser? User { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
     public DateTime ExpiresAt { get; set; }
 }
 

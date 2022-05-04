@@ -7,7 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<PackageId>FastJwtAuth.MongoDB</PackageId>
 		<Title>FastJwtAuth Using MongoDB</Title>
-		<Version>0.4.0</Version>
+		<Version>0.5.0</Version>
 		<Authors>Ziaul Hasan Hamim</Authors>
 		<Description>Quickly implement Authentication in your app with Json Web tokens and refresh token using MongoDB</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -27,6 +27,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
 		<PackageReference Include="MongoDB.Driver" Version="2.13.2" />
+		<PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0-preview3" />
 	</ItemGroup>
 
 	<ItemGroup>

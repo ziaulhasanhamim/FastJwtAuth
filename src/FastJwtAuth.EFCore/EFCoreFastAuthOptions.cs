@@ -1,13 +1,13 @@
 ﻿namespace FastJwtAuth.EFCore;
 
 public class EFCoreFastAuthOptions<TUser, TRefreshToken> : FastAuthOptions<TUser, TRefreshToken, Guid>
-    where TUser : FastUser
-    where TRefreshToken : FastRefreshToken<TUser>
+    where TUser : FastUser, new()
+    where TRefreshToken : FastRefreshToken<TUser>, new()
 {
 }
 
 public class EFCoreFastAuthOptions<TUser> : EFCoreFastAuthOptions<TUser, FastRefreshToken<TUser>>
-    where TUser : FastUser
+    where TUser : FastUser, new()
 {
 }
 

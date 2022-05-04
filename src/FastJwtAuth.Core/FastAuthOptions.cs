@@ -1,32 +1,24 @@
 ﻿namespace FastJwtAuth;
 
-using Microsoft.IdentityModel.Tokens;
-
 public abstract class FastAuthOptions<TUser, TRefreshToken, TUserKey>
-    where TUser : IFastUser<TUserKey>
-    where TRefreshToken : IFastRefreshToken<TUserKey>
+    where TUser : IFastUser<TUserKey>, new()
+    where TRefreshToken : IFastRefreshToken<TUserKey>, new()
 {
-    public SigningCredentials? DefaultSigningCredentials { get; set; }
+    public TokenCreationOptions? DefaultTokenCreationOptions { get; set; }
 
+    /// <summary>
+    /// false by default
+    /// </summary>
     public bool UseRefreshToken { get; set; }
 
     /// <summary>
-    /// Default to 15 days
+    /// This will be called when generating claims. You can add claims to the provided list
     /// </summary>
-    public TimeSpan AccessTokenLifeSpan { get; set; } = TimeSpan.FromMinutes(5);
+    public Action<List<Claim>, TUser>? GenerateClaims { get; set; }
 
-    /// <summary>
-    /// Default to 15 days
-    /// </summary>
-    public TimeSpan RefreshTokenLifeSpan { get; set; } = TimeSpan.FromDays(15);
-
-    /// <summary>
-    /// Number of bytes to generate for refresh token. Default to 32
-    /// </summary>
-    public int RefreshTokenBytesLength { get; set; } = 32;
-
-    /// <summary>
-    /// This event is fired when generating claims. It Gives a List of previously created claims, user entity and service provider as parameter. New claims should be added to the List
-    /// </summary>
-    public Action<List<Claim>, TUser>? OnClaimsGeneration { get; set; }
+    public void UseDefaultCredentials(ReadOnlySpan<char> secretKey)
+    {
+        DefaultTokenCreationOptions ??= new();
+        DefaultTokenCreationOptions.UseDefaultCredentials(secretKey);
+    }
 }
