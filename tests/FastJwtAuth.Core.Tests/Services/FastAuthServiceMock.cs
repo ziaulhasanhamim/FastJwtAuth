@@ -50,6 +50,13 @@ public abstract class FastAuthServiceMock : FastAuthServiceBase<FastUser, FastRe
 
     public abstract Task<bool> DoesNormalizedEmailExistMock(string normalizedEmail, CancellationToken cancellationToken);
 
+    protected override Task<bool> doesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken)
+    {
+        return DoesNormalizedUsernameExistMock(normalizedUsername, cancellationToken);
+    }
+
+    public abstract Task<bool> DoesNormalizedUsernameExistMock(string normalizedUsername, CancellationToken cancellationToken);
+
     protected override Task<(FastRefreshToken? RefreshToken, FastUser? User)> getRefreshTokenById(string id, CancellationToken cancellationToken)
     {
         return GetRefreshTokenByIdMock(id, cancellationToken);

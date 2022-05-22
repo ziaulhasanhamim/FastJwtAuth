@@ -28,7 +28,8 @@ namespace GettingStarted.Controllers
         {
             FastUser user = new()
             {
-                Email = request.Email
+                Email = request.Email,
+                Username = request.Username
             };
             var createResult = await _authService.CreateUser(user, request.Password);
             if (!createResult.Success)
@@ -72,6 +73,7 @@ namespace GettingStarted.Controllers
             UserResponse res = new(
                 user.Id,
                 user.Email,
+                user.Username,
                 user.CreatedAt);
             return Ok(res);
         }

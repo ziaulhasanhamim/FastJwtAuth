@@ -19,7 +19,34 @@ public static class Extensions
         where TUser : FastUser, new()
         where TRefreshToken : FastRefreshToken<TUser>, new()
     {
-        builder.Entity<TUser>();
+        var userEntityBuilder = builder.Entity<TUser>();
+
+        userEntityBuilder.HasKey(user => user.Id);
+        userEntityBuilder.Property(user => user.Email)
+            .IsRequired();
+        userEntityBuilder.Property(user => user.NormalizedEmail)
+            .IsRequired();
+        userEntityBuilder.HasIndex(user => user.NormalizedEmail);
+        userEntityBuilder.Property(user => user.PasswordHash)
+            .IsRequired();
+        userEntityBuilder.Property(user => user.CreatedAt)
+            .IsRequired();
+
+        if (authOptions.HasUsername)
+        {
+            userEntityBuilder.HasIndex(user => user.NormalizedUsername);
+            if (authOptions.IsUsernameCompulsory)
+            {
+                userEntityBuilder.Property(user => user.Username)
+                    .IsRequired();
+            }
+        }
+        else
+        {
+            userEntityBuilder.Ignore(user => user.Username);
+            userEntityBuilder.Ignore(user => user.NormalizedUsername);
+        }
+        
         if (authOptions.UseRefreshToken)
         {
             builder.Entity<TRefreshToken>();
@@ -119,6 +146,11 @@ public static class Extensions
             if (claim.Type == JwtRegisteredClaimNames.Sub)
             {
                 fastUser.Id = Guid.Parse(claim.Value);
+                continue;
+            }
+            if (claim.Type == JwtRegisteredClaimNames.UniqueName)
+            {
+                fastUser.Username = claim.Value;
                 continue;
             }
             if (claim.Type == nameof(FastUser.CreatedAt))

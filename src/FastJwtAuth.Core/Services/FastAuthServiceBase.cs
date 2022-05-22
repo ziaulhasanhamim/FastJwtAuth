@@ -1,5 +1,6 @@
-﻿namespace FastJwtAuth.Core.Services;
+﻿  namespace FastJwtAuth.Core.Services;
 
+using System.Text.RegularExpressions;
 using Microsoft.IdentityModel.Tokens;
 
 
@@ -9,6 +10,10 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
 {
     protected readonly FastAuthOptions<TUser, TRefreshToken, TUserKey> _authOptions;
     protected readonly IFastUserValidator<TUser>? _userValidator;
+
+    public const string UsernameValidationRegex = @"^[a-zA-Z0-9]([-._](?![-._])|[a-zA-Z0-9])*[a-zA-Z0-9]$";
+
+    private static readonly Regex _usernameValidationRegex = new(UsernameValidationRegex, RegexOptions.Compiled);
 
     private readonly static EmailAddressAttribute _emailValidator = new();
     private readonly static JwtSecurityTokenHandler _jwtSecurityTokenHandler = new();
@@ -21,10 +26,20 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
 
     public async Task<CreateUserResult> CreateUser(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(user.Email);
+        Guard.IsNotNull(user.Email);
+        Guard.IsNotNull(password);
+        if (_authOptions.IsUsernameCompulsory)
+        {
+            Guard.IsNotNull(user.Username);
+        }
         user.NormalizedEmail ??= NormalizeText(user.Email);
+        if (user.Username is not null)
+        {
+            user.NormalizedUsername ??= NormalizeText(user.Username);
+        }
 
         var validationErrors = await validateUser(user, password, cancellationToken);
+        
         if (validationErrors is not null)
         {
             return new(false, validationErrors);
@@ -61,7 +76,7 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         await updateUserLastLogin(user, cancellationToken);
 
         var result = await generateTokens(user!, tokenCreationOptions, cancellationToken);
-    
+
         await commitDbChanges(cancellationToken);
 
         return result;
@@ -98,7 +113,7 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
     public async Task<AuthResult<TUser>> Refresh(string refreshToken, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tokenCreationOptions.SigningCredentials);
-        
+
         if (!_authOptions.UseRefreshToken)
         {
             throw new NotImplementedException("FastJwtAuth.Core.Options.FastAuthOptions.UseRefreshToken is false. make it true for refresh");
@@ -137,7 +152,7 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
             refreshToken = refreshTokenEntity.Id;
             refreshTokenExpireDate = refreshTokenEntity.ExpiresAt;
         }
-        
+
         var claims = GetClaimsForUser(user);
         JwtSecurityToken securityToken = new(
             claims: claims,
@@ -156,10 +171,6 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
 
     protected virtual async ValueTask<List<string>?> validateUser(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        Guard.IsNotNull(user.Email);
-        Guard.IsNotNull(user.NormalizedEmail);
-        Guard.IsNotNull(password);
-
         List<string>? errors = null;
         bool complete = false;
         if (_userValidator is not null)
@@ -170,12 +181,32 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         {
             return errors;
         }
+        errors = validatePassword(password, errors);
+        errors = await validateEmail(user, errors, cancellationToken);
+        if (user.Username is not null)
+        {
+            errors = await validateUsername(user, errors, cancellationToken);
+        }
+        return errors;
+    }
 
-        if (password.Length < 8)
+    private List<string>? validatePassword(string password, List<string>? errors)
+    {
+        if (password.Length < _authOptions.PasswordMinLength)
         {
             errors ??= new();
             errors.Add(FastAuthErrorCodes.PasswordVeryShort);
         }
+        else if (_authOptions.PasswordMaxLength.HasValue && password.Length < _authOptions.PasswordMaxLength.Value)
+        {
+            errors ??= new();
+            errors.Add(FastAuthErrorCodes.PasswordVeryLong);
+        }
+        return errors;
+    }
+
+    private async ValueTask<List<string>?> validateEmail(TUser user, List<string>? errors, CancellationToken cancellationToken)
+    {
         var emailValid = _emailValidator.IsValid(user.Email);
         if (!emailValid)
         {
@@ -194,6 +225,37 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
         return errors;
     }
 
+    private async ValueTask<List<string>?> validateUsername(TUser user, List<string>? errors, CancellationToken cancellationToken)
+    {
+        if (user.Username!.Length < _authOptions.UsernameMinLength)
+        {
+            errors ??= new();
+            errors.Add(FastAuthErrorCodes.UsernameVeryShort);
+        }
+        else if (_authOptions.UsernameMaxLength.HasValue && user.Username.Length > _authOptions.UsernameMaxLength.Value)
+        {
+            errors ??= new();
+            errors.Add(FastAuthErrorCodes.UsernameVeryLong);
+        }
+        else if (!_usernameValidationRegex.IsMatch(user.Username))
+        {
+            errors ??= new();
+            errors.Add(FastAuthErrorCodes.InvalidUsernameFormat);
+        }
+        else
+        {
+            var usernameExists = await doesNormalizedUsernameExist(user.NormalizedUsername!, cancellationToken);
+            if (usernameExists)
+            {
+                errors ??= new();
+                errors.Add(FastAuthErrorCodes.DuplicateUsername);
+            }
+        }
+        return errors;
+    }
+
+    protected abstract Task<bool> doesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken);
+
     public virtual bool VerifyPassword(string rawPassword, string hashedPassword) =>
         BCrypt.Net.BCrypt.Verify(rawPassword, hashedPassword);
 
@@ -211,10 +273,14 @@ public abstract class FastAuthServiceBase<TUser, TRefreshToken, TUserKey> : IFas
     {
         List<Claim> claims = new()
         {
-            new(JwtRegisteredClaimNames.Jti, user.Id!.ToString()!),
+            new(JwtRegisteredClaimNames.Sub, user.Id!.ToString()!),
             new(JwtRegisteredClaimNames.Email, user.Email!),
             new(nameof(IFastUser<Guid>.CreatedAt), user.CreatedAt.ToString()!)
         };
+        if (user.Username is not null)
+        {
+            claims.Add(new(JwtRegisteredClaimNames.UniqueName, user.Username));
+        }
         _authOptions.GenerateClaims?.Invoke(claims, user);
         return claims;
     }

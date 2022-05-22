@@ -20,7 +20,8 @@ public class FastAuthServiceTests
     {
         FastUser user = new()
         {
-            Email = "Test@test.com"
+            Email = "Testest.com",
+            Username = "userNAME  dasd"
         };
         var password = "pass";
 
@@ -33,7 +34,9 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseDefaultCredentials("very-very-very secret key"),
+            HasUsername = true,
+            IsUsernameCompulsory = true
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions, userValidator);
@@ -42,12 +45,70 @@ public class FastAuthServiceTests
             .DoesNormalizedEmailExistMock(authService.NormalizeText(user.Email), default)
             .Returns(true);
 
+        authService.Configure()
+            .DoesNormalizedUsernameExistMock(authService.NormalizeText(user.Username), default)
+            .Returns(true);
+
         var result = await authService.CreateUser(user, password);
 
         result.Success.Should().BeFalse();
-        result.ErrorCodes.Should().HaveCount(3);
+        result.ErrorCodes.Should().HaveCount(4);
         result.ErrorCodes.Should()
-            .Contain(new[] { "SomeOtherError", FastAuthErrorCodes.PasswordVeryShort, FastAuthErrorCodes.DuplicateEmail });
+            .Contain(new[]
+            {
+                "SomeOtherError",
+                FastAuthErrorCodes.PasswordVeryShort, 
+                FastAuthErrorCodes.InvalidEmailFormat,
+                FastAuthErrorCodes.InvalidUsernameFormat
+            });
+    }
+
+    [Fact]
+    public async Task CreateUserAsync_DuplicateInput_FailureAuthResult()
+    {
+        FastUser user = new()
+        {
+            Email = "Test@test.com",
+            Username = "userNAME"
+        };
+        var password = "pass";
+
+        var userValidator = Substitute.For<IFastUserValidator<FastUser>>();
+
+        userValidator.Validate(user, password)
+            .Returns((false, new() { "SomeOtherError" }));
+
+        FastAuthOptionsTestImpl fastAuthOptions = new()
+        {
+            UseRefreshToken = true,
+            DefaultTokenCreationOptions = new TokenCreationOptions()
+                .UseDefaultCredentials("very-very-very secret key"),
+            HasUsername = true,
+            IsUsernameCompulsory = true
+        };
+
+        var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions, userValidator);
+
+        authService.Configure()
+            .DoesNormalizedEmailExistMock(authService.NormalizeText(user.Email), default)
+            .Returns(true);
+
+        authService.Configure()
+            .DoesNormalizedUsernameExistMock(authService.NormalizeText(user.Username), default)
+            .Returns(true);
+
+        var result = await authService.CreateUser(user, password);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCodes.Should().HaveCount(4);
+        result.ErrorCodes.Should()
+            .Contain(new[]
+            {
+                "SomeOtherError",
+                FastAuthErrorCodes.PasswordVeryShort, 
+                FastAuthErrorCodes.DuplicateEmail,
+                FastAuthErrorCodes.DuplicateUsername
+            });
     }
 
     [Fact]
@@ -55,7 +116,8 @@ public class FastAuthServiceTests
     {
         FastUser user = new()
         {
-            Email = "teat@Test.com"
+            Email = "teat@Test.com",
+            Username = "userName"
         };
         var password = "testpass";
 
@@ -63,14 +125,16 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseDefaultCredentials("very-very-very secret key"),
+            HasUsername = true,
+            IsUsernameCompulsory = true
         };
         FastRefreshToken refreshToken = new()
         {
             Id = Guid.NewGuid().ToString(),
             ExpiresAt = DateTime.UtcNow + fastAuthOptions.DefaultTokenCreationOptions.RefreshTokenLifeSpan
         };
-        
+
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
         authService.Configure().CreateRefreshTokenMock(user, default)
@@ -82,6 +146,7 @@ public class FastAuthServiceTests
         result.Success.Should().BeTrue();
 
         user.NormalizedEmail.Should().Be(user.Email.Normalize().ToUpperInvariant());
+        user.NormalizedUsername.Should().Be(user.Username.Normalize().ToUpperInvariant());
         user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
         user.LastLogin.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
 
@@ -160,7 +225,7 @@ public class FastAuthServiceTests
         };
         var password = "testpass";
 
-        
+
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
@@ -289,8 +354,6 @@ public class FastAuthServiceTests
         authService.CreateRefreshTokenMock(user, default)
             .Returns(refreshToken);
 
-        List<Claim> claims = new() { new("Id", user.Id.ToString()) };
-
         var result = await authService.Refresh(refreshToken.Id!);
 
         commonAssert(user, refreshToken, fastAuthOptions, result);
@@ -324,7 +387,7 @@ public class FastAuthServiceTests
             MapInboundClaims = false
         };
         var claimPrinciple = tokenHandler.ValidateToken(successResult.AccessToken, validationParams, out _);
-        claimPrinciple.Claims.First(c => c.Type == JwtRegisteredClaimNames.Jti).Value.Should().Be(user.Id.ToString());
+        claimPrinciple.Claims.First(c => c.Type == JwtRegisteredClaimNames.Sub).Value.Should().Be(user.Id.ToString());
         claimPrinciple.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value.Should().Be(user.Email);
     }
 }

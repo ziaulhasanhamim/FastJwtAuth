@@ -8,5 +8,6 @@ namespace GettingStarted.Dtos
 {
     public record CreateUserRequest(
         [EmailAddress, Required] string Email,
+        [Required] string Username,
         [MinLength(8), Required] string Password);
 }

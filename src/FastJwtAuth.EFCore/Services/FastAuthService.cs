@@ -89,4 +89,8 @@ public class FastAuthService<TUser, TRefreshToken, TDbContext>
     {
         return _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    protected override Task<bool> doesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken) => 
+        _dbContext.Set<TUser>()
+            .AnyAsync(user => user.NormalizedUsername == normalizedUsername, cancellationToken);
 }

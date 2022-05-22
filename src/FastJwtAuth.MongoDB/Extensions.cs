@@ -1,26 +1,12 @@
 ﻿namespace FastJwtAuth.MongoDB;
 
+using global::MongoDB.Bson.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 public static class Extensions
 {
-    public static Task CreateFastUserIndexes<TUser>(this IMongoCollection<TUser> usersCollection, CancellationToken cancellationToken = default)
-        where TUser : FastUser, new()
-    {
-        var indexKeysDefinition = Builders<TUser>.IndexKeys.Ascending(user => user.NormalizedEmail);
-        return usersCollection.Indexes.CreateOneAsync(
-            new CreateIndexModel<TUser>(indexKeysDefinition),
-            null,
-            cancellationToken);
-    }
-
-    public static Task CreateFastUserIndexes(this IMongoCollection<FastUser> usersCollection, CancellationToken cancellationToken = default)
-    {
-        return CreateFastUserIndexes<FastUser>(usersCollection, cancellationToken);
-    }
-
     public static void AddFastAuthWithMongo<TUser, TRefreshToken>(
         this IServiceCollection services, 
         Action<MongoFastAuthOptions<TUser, TRefreshToken>> optionAction)
@@ -91,6 +77,11 @@ public static class Extensions
             if (claim.Type == JwtRegisteredClaimNames.Email)
             {
                 fastUser.Email = claim.Value;
+                continue;
+            }
+            if (claim.Type == JwtRegisteredClaimNames.UniqueName)
+            {
+                fastUser.Username = claim.Value;
                 continue;
             }
             if (claim.Type == JwtRegisteredClaimNames.Sub)

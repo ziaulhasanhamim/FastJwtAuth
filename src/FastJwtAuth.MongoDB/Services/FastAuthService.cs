@@ -125,4 +125,13 @@ public class FastAuthService<TUser, TRefreshToken>
     {
         return Task.CompletedTask;
     }
+
+    protected override Task<bool> doesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken)
+    {
+        var filter = new BsonDocument()
+        {
+            [nameof(FastUser.NormalizedUsername)] = normalizedUsername
+        };
+        return _usersCollection.Find(filter).AnyAsync(cancellationToken);
+    }
 }

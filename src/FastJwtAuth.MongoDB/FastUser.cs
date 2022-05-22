@@ -12,6 +12,10 @@ public class FastUser : IFastUser<string>
 
     public string? NormalizedEmail { get; set; }
 
+    public string? Username { get; set; }
+
+    public string? NormalizedUsername { get; set; }
+
     public string? PasswordHash { get; set; }
 
     public DateTime CreatedAt { get; set; }

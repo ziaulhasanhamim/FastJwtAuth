@@ -2,21 +2,25 @@
 
 public interface IFastUser<TKey>
 {
-    public TKey? Id { get; set; }
+    TKey? Id { get; set; }
 
-    public string? Email { get; set; }
+    string? Email { get; set; }
 
-    public string? NormalizedEmail { get; set; }
+    string? NormalizedEmail { get; set; }
 
-    public string? PasswordHash { get; set; }
+    string? Username { get; set; }
+
+    string? NormalizedUsername { get; set; }
+
+    string? PasswordHash { get; set; }
 
     /// <summary>
     /// User Creation date. Generally Stored in utc
     /// </summary>
-    public DateTime CreatedAt { get; set; }
+    DateTime CreatedAt { get; set; }
 
     /// <summary>
     /// Last time user logged in. Generally Stored in utc
     /// </summary>
-    public DateTime? LastLogin { get; set; }
+    DateTime? LastLogin { get; set; }
 }

@@ -78,6 +78,8 @@ namespace GettingStarted
             services.AddFastAuthWithEFCore<ApplicationDbContext>(options =>
             {
                 options.UseRefreshToken = true;
+                options.HasUsername = true;
+                options.IsUsernameCompulsory = true;
                 options.UseDefaultCredentials("123456789abcdefgfhijklmnopqrstuvwxyz");
             });
 

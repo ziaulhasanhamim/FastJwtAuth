@@ -8,5 +8,6 @@ namespace GettingStarted.Dtos
     public record UserResponse(
         Guid Id,
         string Email,
+        string Username,
         DateTime CreatedAt);
 }
