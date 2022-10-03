@@ -1,5 +1,6 @@
 ﻿namespace FastJwtAuth.MongoDB;
 
+[Open]
 public class MongoFastAuthOptions<TUser, TRefreshToken> : FastAuthOptions<TUser, TRefreshToken, string>
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
@@ -19,13 +20,13 @@ public class MongoFastAuthOptions<TUser, TRefreshToken> : FastAuthOptions<TUser,
     public Func<IServiceProvider, IMongoDatabase>? MongoDatabaseGetter { get; set; }
 }
 
+[Open]
 public class MongoFastAuthOptions<TUser> : MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>
     where TUser : FastUser, new()
 {
-    
 }
 
+[Open]
 public class MongoFastAuthOptions : MongoFastAuthOptions<FastUser, FastRefreshToken>
 {
-    
 }

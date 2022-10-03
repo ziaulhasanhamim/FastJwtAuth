@@ -4,3 +4,4 @@ global using FastJwtAuth.Core.Entities;
 global using System.ComponentModel.DataAnnotations;
 global using System.Diagnostics;
 global using CommunityToolkit.Diagnostics;
+global using Nopen.NET;

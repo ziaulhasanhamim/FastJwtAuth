@@ -23,7 +23,7 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     Task<CreateUserResult> CreateUser(TUser user, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Authenticates an user user
+    /// Authenticates an user
     /// </summary>
     /// <param name="email">Email of user</param>
     /// <param name="password">Password of user</param>
@@ -33,7 +33,7 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     Task<AuthResult<TUser>> Authenticate(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Authenticates an user user
+    /// Authenticates an user
     /// </summary>
     /// <param name="email">Email of user</param>
     /// <param name="password">Password of user</param>
@@ -42,7 +42,7 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     Task<AuthResult<TUser>> Authenticate(string email, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Authenticates an user user
+    /// Authenticates an user
     /// </summary>
     /// <param name="user">User entity</param>
     /// <param name="tokenCreationOptions"><see cref="TokenCreationOptions"/> containing required information for jwt signing. If none default one will be used from FastAuthOptions</param>
@@ -50,7 +50,7 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     Task<AuthResult<TUser>.Success> Authenticate(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Authenticates an user user
+    /// Authenticates an user
     /// </summary>
     /// <param name="user">User entity</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
@@ -68,8 +68,8 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     /// Refresh and get new a refresh token and access token
     /// </summary>
     /// <param name="refreshToken">The user entity</param>
-    /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <param name="tokenCreationOptions"><see cref="TokenCreationOptions"/> containing required information for jwt signing. If none default one will be used from FastAuthOptions</param>
+    /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if refresh was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
     Task<AuthResult<TUser>> Refresh(string refreshToken, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 

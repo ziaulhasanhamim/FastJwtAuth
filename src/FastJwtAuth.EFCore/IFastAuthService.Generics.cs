@@ -13,5 +13,4 @@ public interface IFastAuthService<TUser> : IFastAuthService<TUser, FastRefreshTo
 
 public interface IFastAuthService : IFastAuthService<FastUser, FastRefreshToken>
 {
-
 }

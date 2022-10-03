@@ -26,7 +26,8 @@
 	
 	<ItemGroup>
 	  <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
-	  <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0-preview3" />
+	  <PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0" />
+	  <PackageReference Include="Nopen.NET" Version="1.0.1" />
 	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.12.2" />
 	</ItemGroup>
 

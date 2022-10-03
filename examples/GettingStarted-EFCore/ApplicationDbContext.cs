@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace GettingStarted
 {
-    public class ApplicationDbContext : DbContext
+    public sealed class ApplicationDbContext : DbContext
     {
         private readonly EFCoreFastAuthOptions _authOptions;
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, EFCoreFastAuthOptions authOptions)

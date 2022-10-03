@@ -1,10 +1,12 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Nopen.NET;
 
 #nullable disable
 
 namespace GettingStarted.Migrations
 {
+    [Open]
     public partial class InitialCreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

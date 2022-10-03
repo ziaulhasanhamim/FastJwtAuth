@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 
+[Open]
 public class FastRefreshToken<TUser> : IFastRefreshToken<Guid>
     where TUser : FastUser
 {
@@ -20,7 +21,7 @@ public class FastRefreshToken<TUser> : IFastRefreshToken<Guid>
     public DateTime ExpiresAt { get; set; }
 }
 
+[Open]
 public class FastRefreshToken : FastRefreshToken<FastUser>
 {
-
 }

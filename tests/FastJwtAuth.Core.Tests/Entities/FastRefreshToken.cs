@@ -3,7 +3,7 @@ using System;
 
 namespace FastJwtAuth.Core.Tests.Entities
 {
-    public class FastRefreshToken : IFastRefreshToken<Guid>
+    public sealed class FastRefreshToken : IFastRefreshToken<Guid>
     {
         public string? Id { get; set; }
 

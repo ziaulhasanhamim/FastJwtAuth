@@ -3,7 +3,7 @@ namespace FastJwtAuth;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
-public class TokenCreationOptions
+public sealed class TokenCreationOptions
 {
     public SigningCredentials? SigningCredentials { get; set; }
 
@@ -27,9 +27,9 @@ public class TokenCreationOptions
     public string? Audience { get; set; }
 
     /// <summary>
-    /// Create and set <see cref="TokenCreationOptions.SigningCredentials"/> with <paramref name="secretKey"/> and <see cref="SecurityAlgorithms.HmacSha256"/> algorithm
+    /// Create and set <see cref="SigningCredentials"/> with <paramref name="secretKey"/> and <see cref="SecurityAlgorithms.HmacSha256"/> algorithm
     /// </summary>
-    public TokenCreationOptions UseDefaultCredentials(ReadOnlySpan<char> secretKey)
+    public TokenCreationOptions UseSymmetricCredentials(ReadOnlySpan<char> secretKey)
     {
         if (SigningCredentials is not null)
         {
@@ -37,14 +37,13 @@ public class TokenCreationOptions
         }
         var bytesCount = Encoding.Unicode.GetByteCount(secretKey);
         var secretBytes = new byte[bytesCount];
-        
+
         var byteRecv = Encoding.Unicode.GetBytes(secretKey, secretBytes);
 
         Debug.Assert(bytesCount == byteRecv);
-        
+
         SymmetricSecurityKey securityKey = new(secretBytes);
         SigningCredentials = new(securityKey, SecurityAlgorithms.HmacSha256);
         return this;
     }
-
 }

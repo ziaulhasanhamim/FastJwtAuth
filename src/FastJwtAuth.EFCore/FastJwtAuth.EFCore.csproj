@@ -33,8 +33,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Nopen.NET" Version="1.0.1" />
 		<ProjectReference Include="..\FastJwtAuth.Core\FastJwtAuth.Core.csproj" />
-		<PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0-preview3" />
+		<PackageReference Include="CommunityToolkit.Diagnostics" Version="8.0.0" />
 	</ItemGroup>
 
 </Project>

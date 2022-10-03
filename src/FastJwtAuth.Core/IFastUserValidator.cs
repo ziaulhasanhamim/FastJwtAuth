@@ -10,5 +10,5 @@ public interface IFastUserValidator<TUser>
     /// Validates the user
     /// </summary>
     /// <returns>A ValueTask of a two item Tuple. First element is bool which indicates if Validation is completed. If its true then no further validation would be performed. The second element is a dictionary containing Validation Errors. It should be null if no validation error is found</returns>
-    ValueTask<(bool ValidationComplete, List<string>? ErrorCodes)> Validate(TUser user, string password);
+    ValueTask<FastUserValidationResult> Validate(TUser user, string password);
 }

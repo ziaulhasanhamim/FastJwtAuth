@@ -14,7 +14,7 @@ namespace GettingStarted.Controllers
 {
     [Route("/api/[controller]/")]
     [ApiController]
-    public class AuthenticationController : ControllerBase
+    public sealed class AuthenticationController : ControllerBase
     {
         private readonly IFastAuthService _authService;
 
@@ -69,7 +69,7 @@ namespace GettingStarted.Controllers
         [Authorize]
         public IActionResult Authorize()
         {
-            var user = User.MapClaimsToFastUser();
+            var user = User.Identities.First().ToFastUser();
             UserResponse res = new(
                 user.Id,
                 user.Email,

@@ -6,3 +6,4 @@ global using FastJwtAuth.MongoDB.Services;
 global using FastJwtAuth.Core.Services;
 global using MongoDB.Bson;
 global using MongoDB.Driver.Linq;
+global using Nopen.NET;

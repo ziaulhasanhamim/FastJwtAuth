@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 public static class Extensions
 {
     public static void AddFastAuthWithMongo<TUser, TRefreshToken>(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<MongoFastAuthOptions<TUser, TRefreshToken>> optionAction)
         where TUser : FastUser, new()
         where TRefreshToken : FastRefreshToken<TUser>, new()
@@ -17,10 +17,10 @@ public static class Extensions
         optionAction(authOptions);
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
-            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+            throw new ArgumentNullException("DefaultTokenCreationOptions.SigningCredentials", "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
-        
+
         services.AddScoped<
             IFastAuthService<TUser>,
             FastAuthService<TUser>>();
@@ -30,7 +30,7 @@ public static class Extensions
     }
 
     public static void AddFastAuthWithMongo<TUser>(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>> optionAction)
         where TUser : FastUser, new()
     {
@@ -38,11 +38,13 @@ public static class Extensions
         optionAction(authOptions);
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
-            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+            throw new ArgumentNullException(
+                "DefaultTokenCreationOptions.SigningCredentials",
+                "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
         services.AddSingleton<MongoFastAuthOptions<TUser, FastRefreshToken<TUser>>>(authOptions);
-        
+
         services.AddScoped<
             IFastAuthService<TUser>,
             FastAuthService<TUser>>();
@@ -57,22 +59,23 @@ public static class Extensions
         optionAction(authOptions);
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
-            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+            throw new ArgumentNullException(
+                "DefaultTokenCreationOptions.SigningCredentials",
+                "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
         services.AddSingleton<MongoFastAuthOptions<FastUser, FastRefreshToken>>(authOptions);
-
 
         services.AddScoped<IFastAuthService, FastAuthService>();
 
         services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(sp => sp.GetService<IFastAuthService>()!);
     }
 
-    public static TUser MapClaimsToFastUser<TUser>(this ClaimsPrincipal claimsPrincipal)
+    public static TUser ToFastUser<TUser>(this ClaimsIdentity claimsIdentity)
         where TUser : FastUser, new()
     {
         TUser fastUser = new();
-        foreach (var claim in claimsPrincipal.Claims)
+        foreach (var claim in claimsIdentity.Claims)
         {
             if (claim.Type == JwtRegisteredClaimNames.Email)
             {
@@ -98,8 +101,6 @@ public static class Extensions
         return fastUser;
     }
 
-    public static FastUser MapClaimsToFastUser(this ClaimsPrincipal claimsPrincipal)
-    {
-        return claimsPrincipal.MapClaimsToFastUser<FastUser>();
-    }
+    public static FastUser MapClaimsToFastUser(this ClaimsIdentity claimsIdentity) =>
+        claimsIdentity.ToFastUser<FastUser>();
 }

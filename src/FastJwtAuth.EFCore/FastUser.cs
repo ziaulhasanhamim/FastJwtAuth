@@ -1,5 +1,6 @@
 ﻿namespace FastJwtAuth.EFCore;
 
+[Open]
 public class FastUser : IFastUser<Guid>
 {
     public Guid Id { get; set; }

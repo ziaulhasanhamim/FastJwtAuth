@@ -1,5 +1,6 @@
 ﻿namespace FastJwtAuth.EFCore.Services;
 
+[Open]
 public class FastAuthService<TUser, TDbContext> : FastAuthService<TUser, FastRefreshToken<TUser>, TDbContext>, IFastAuthService<TUser>
     where TUser : FastUser, new()
     where TDbContext : DbContext
@@ -13,6 +14,7 @@ public class FastAuthService<TUser, TDbContext> : FastAuthService<TUser, FastRef
     }
 }
 
+[Open]
 public class FastAuthService<TDbContext> : FastAuthService<FastUser, FastRefreshToken, TDbContext>, IFastAuthService
     where TDbContext : DbContext
 {

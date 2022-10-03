@@ -11,7 +11,7 @@ namespace GettingStarted.Controllers
     [ApiController]
     [Route("[controller]")]
     [Authorize]
-    public class WeatherForecastController : ControllerBase
+    public sealed class WeatherForecastController : ControllerBase
     {
         private static readonly string[] Summaries = new[]
         {

@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using FastJwtAuth;
 using FastJwtAuth.Core.Services;
 
-public class FastAuthService<TUser, TRefreshToken, TDbContext> 
+[Open]
+public class FastAuthService<TUser, TRefreshToken, TDbContext>
     : FastAuthServiceBase<TUser, TRefreshToken, Guid>, IFastAuthService<TUser, TRefreshToken>
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
@@ -23,17 +24,17 @@ public class FastAuthService<TUser, TRefreshToken, TDbContext>
         _dbContext = dbContext;
     }
 
-    protected override async Task addUser(TUser user, CancellationToken cancellationToken)
+    protected override async Task AddUser(TUser user, CancellationToken cancellationToken)
     {
         await _dbContext.AddAsync(user, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    protected override async ValueTask<TRefreshToken> createRefreshToken(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
+    protected override async ValueTask<TRefreshToken> CreateRefreshToken(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
     {
         var randomBytes = ArrayPool<byte>.Shared.Rent(tokenCreationOptions.RefreshTokenBytesLength);
         using var rng = RandomNumberGenerator.Create();
-        
+
         rng.GetBytes(randomBytes);
 
         var utcNow = DateTime.UtcNow;
@@ -50,12 +51,12 @@ public class FastAuthService<TUser, TRefreshToken, TDbContext>
         return refreshToken;
     }
 
-    protected override Task<bool> doesNormalizedEmailExist(string nomalizedEmail, CancellationToken cancellationToken = default) =>
+    protected override Task<bool> DoesNormalizedEmailExist(string nomalizedEmail, CancellationToken cancellationToken = default) =>
         _dbContext.Set<TUser>()
             .AnyAsync(user => user.NormalizedEmail == nomalizedEmail, cancellationToken);
 
-    protected override async Task<(TRefreshToken? RefreshToken, TUser? User)> getRefreshTokenById(
-        string id, 
+    protected override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenById(
+        string id,
         CancellationToken cancellationToken)
     {
         var refreshToken = await _dbContext.Set<TRefreshToken>()
@@ -65,32 +66,32 @@ public class FastAuthService<TUser, TRefreshToken, TDbContext>
         return (refreshToken, refreshToken?.User);
     }
 
-    protected override Task<TUser?> getUserByNormalizedEmail(
-        string normalizedEmail, 
+    protected override Task<TUser?> GetUserByNormalizedEmail(
+        string normalizedEmail,
         CancellationToken cancellationToken) =>
         _dbContext.Set<TUser>()
             .AsNoTracking()
             .FirstOrDefaultAsync(user => user.NormalizedEmail == normalizedEmail, cancellationToken)!;
 
-    protected override Task removeRefreshToken(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
+    protected override Task RemoveRefreshToken(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
     {
         _dbContext.Remove(refreshTokenEntity);
         return Task.CompletedTask;
     }
 
-    protected override Task updateUserLastLogin(TUser user, CancellationToken cancellationToken)
+    protected override Task UpdateUserLastLogin(TUser user, CancellationToken cancellationToken)
     {
         var entry = _dbContext.Entry(user);
         entry.Property(nameof(user.LastLogin));
         return Task.CompletedTask;
     }
 
-    protected override Task commitDbChanges(CancellationToken cancellationToken)
+    protected override Task CommitDbChanges(CancellationToken cancellationToken)
     {
         return _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    protected override Task<bool> doesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken) => 
+    protected override Task<bool> DoesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken) =>
         _dbContext.Set<TUser>()
             .AnyAsync(user => user.NormalizedUsername == normalizedUsername, cancellationToken);
 }

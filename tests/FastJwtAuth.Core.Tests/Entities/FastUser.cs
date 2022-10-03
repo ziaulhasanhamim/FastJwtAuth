@@ -7,8 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
-public class FastUser : IFastUser<Guid>
+public sealed class FastUser : IFastUser<Guid>
 {
     public Guid Id { get; set; }
 
@@ -25,5 +24,4 @@ public class FastUser : IFastUser<Guid>
     public DateTime CreatedAt { get; set; }
 
     public DateTime? LastLogin { get; set; }
-
 }

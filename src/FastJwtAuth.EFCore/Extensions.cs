@@ -46,7 +46,7 @@ public static class Extensions
             userEntityBuilder.Ignore(user => user.Username);
             userEntityBuilder.Ignore(user => user.NormalizedUsername);
         }
-        
+
         if (authOptions.UseRefreshToken)
         {
             builder.Entity<TRefreshToken>();
@@ -60,7 +60,6 @@ public static class Extensions
     {
         ConfigureAuthModels<TUser, FastRefreshToken<TUser>>(builder, authOptions);
     }
-
 
     public static void ConfigureAuthModels(
         this ModelBuilder builder,
@@ -80,7 +79,9 @@ public static class Extensions
         optionAction(authOptions);
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
-            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+            throw new ArgumentNullException(
+                "DefaultTokenCreationOptions.SigningCredentials", 
+                "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
 
@@ -99,7 +100,9 @@ public static class Extensions
         optionAction(authOptions);
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
-            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+            throw new ArgumentNullException(
+                "DefaultTokenCreationOptions.SigningCredentials",
+                "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
         services.AddSingleton<EFCoreFastAuthOptions<TUser, FastRefreshToken<TUser>>>(authOptions);
@@ -121,7 +124,9 @@ public static class Extensions
         optionAction(authOptions);
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
-            throw new ArgumentNullException("You should set DefaultTokenCreationOptions.SigningCredentials first");
+            throw new ArgumentNullException(
+                "DefaultTokenCreationOptions.SigningCredentials", 
+                "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
         services.AddSingleton<EFCoreFastAuthOptions<FastUser, FastRefreshToken>>(authOptions);
@@ -132,11 +137,11 @@ public static class Extensions
             sp => sp.GetService<IFastAuthService>()!);
     }
 
-    public static TUser MapClaimsToFastUser<TUser>(this ClaimsPrincipal claimsPrincipal)
+    public static TUser ToFastUser<TUser>(this ClaimsIdentity claimsIdentity)
         where TUser : FastUser, new()
     {
         TUser fastUser = new();
-        foreach (var claim in claimsPrincipal.Claims)
+        foreach (var claim in claimsIdentity.Claims)
         {
             if (claim.Type == JwtRegisteredClaimNames.Email)
             {
@@ -156,14 +161,13 @@ public static class Extensions
             if (claim.Type == nameof(FastUser.CreatedAt))
             {
                 fastUser.CreatedAt = DateTime.Parse(claim.Value);
-                continue;
             }
         }
         return fastUser;
     }
 
-    public static FastUser MapClaimsToFastUser(this ClaimsPrincipal claimsPrincipal)
+    public static FastUser ToFastUser(this ClaimsIdentity claimsIdentity)
     {
-        return MapClaimsToFastUser<FastUser>(claimsPrincipal);
+        return ToFastUser<FastUser>(claimsIdentity);
     }
 }

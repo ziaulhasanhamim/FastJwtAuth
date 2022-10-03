@@ -3,7 +3,8 @@
 using System.Buffers;
 using System.Security.Cryptography;
 
-public class FastAuthService<TUser, TRefreshToken> 
+[Open]
+public class FastAuthService<TUser, TRefreshToken>
     : FastAuthServiceBase<TUser, TRefreshToken, string>, IFastAuthService<TUser, TRefreshToken>
     where TUser : FastUser, new()
     where TRefreshToken : FastRefreshToken<TUser>, new()
@@ -14,8 +15,8 @@ public class FastAuthService<TUser, TRefreshToken>
     private readonly IMongoCollection<TRefreshToken> _refreshTokenCollection;
 
     public FastAuthService(
-        MongoFastAuthOptions<TUser, TRefreshToken> authOptions, 
-        IServiceProvider sp, 
+        MongoFastAuthOptions<TUser, TRefreshToken> authOptions,
+        IServiceProvider sp,
         IFastUserValidator<TUser>? userValidator = null)
         : base(authOptions, userValidator)
     {
@@ -45,10 +46,10 @@ public class FastAuthService<TUser, TRefreshToken>
         _refreshTokenCollection = _db.GetCollection<TRefreshToken>(_mongoAuthOptions.RefreshTokenCollectionName);
     }
 
-    protected override Task addUser(TUser user, CancellationToken cancellationToken) =>
+    protected override Task AddUser(TUser user, CancellationToken cancellationToken) =>
         _usersCollection.InsertOneAsync(user, null, cancellationToken);
 
-    protected override async ValueTask<TRefreshToken> createRefreshToken(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
+    protected override async ValueTask<TRefreshToken> CreateRefreshToken(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken)
     {
         var randomBytes = ArrayPool<byte>.Shared.Rent(tokenCreationOptions.RefreshTokenBytesLength);
 
@@ -70,7 +71,7 @@ public class FastAuthService<TUser, TRefreshToken>
         return refreshToken;
     }
 
-    protected override Task<bool> doesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken)
+    protected override Task<bool> DoesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -79,7 +80,7 @@ public class FastAuthService<TUser, TRefreshToken>
         return _usersCollection.Find(filter).AnyAsync(cancellationToken);
     }
 
-    protected override async Task<(TRefreshToken? RefreshToken, TUser? User)> getRefreshTokenById(string id, CancellationToken cancellationToken)
+    protected override async Task<(TRefreshToken? RefreshToken, TUser? User)> GetRefreshTokenById(string id, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -90,7 +91,7 @@ public class FastAuthService<TUser, TRefreshToken>
         return (refreshToken, refreshToken?.User);
     }
 
-    protected override Task<TUser?> getUserByNormalizedEmail(string normalizedEmail, CancellationToken cancellationToken)
+    protected override Task<TUser?> GetUserByNormalizedEmail(string normalizedEmail, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -99,7 +100,7 @@ public class FastAuthService<TUser, TRefreshToken>
         return _usersCollection.Find(filter).FirstOrDefaultAsync(cancellationToken)!;
     }
 
-    protected override Task removeRefreshToken(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
+    protected override Task RemoveRefreshToken(TRefreshToken refreshTokenEntity, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -108,7 +109,7 @@ public class FastAuthService<TUser, TRefreshToken>
         return _refreshTokenCollection.DeleteOneAsync(filter, cancellationToken);
     }
 
-    protected override Task updateUserLastLogin(TUser user, CancellationToken cancellationToken)
+    protected override Task UpdateUserLastLogin(TUser user, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -121,12 +122,12 @@ public class FastAuthService<TUser, TRefreshToken>
         return _usersCollection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
-    protected override Task commitDbChanges(CancellationToken cancellationToken)
+    protected override Task CommitDbChanges(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 
-    protected override Task<bool> doesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken)
+    protected override Task<bool> DoesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {

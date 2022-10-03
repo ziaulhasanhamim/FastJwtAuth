@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace GettingStarted
 {
-    public class Startup
+    public sealed class Startup
     {
         public Startup(IConfiguration configuration)
         {
@@ -55,11 +55,11 @@ namespace GettingStarted
                         Type = ReferenceType.SecurityScheme,
                         Id = "Bearer"
                     },
-                }, new string[0]);
+                }, Array.Empty<string>());
 
                 options.AddSecurityRequirement(securityRequirement);
             });
-            
+
             services.AddAuthentication("JwtAuth")
                 .AddJwtBearer("JwtAuth", options =>
                 {

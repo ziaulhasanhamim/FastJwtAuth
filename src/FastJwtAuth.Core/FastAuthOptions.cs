@@ -14,13 +14,13 @@ public abstract class FastAuthOptions<TUser, TRefreshToken, TUserKey>
     /// <summary>
     /// This will be called when generating claims. You can add claims to the provided list
     /// </summary>
-    public Action<List<Claim>, TUser>? GenerateClaims { get; set; }
+    public Action<List<Claim>, TUser>? OnClaimsGeneration { get; set; }
 
     private bool _hasUsername;
 
-    public bool HasUsername 
-    { 
-        get => _hasUsername; 
+    public bool HasUsername
+    {
+        get => _hasUsername;
         set
         {
             if (!value)
@@ -57,6 +57,6 @@ public abstract class FastAuthOptions<TUser, TRefreshToken, TUserKey>
     public void UseDefaultCredentials(ReadOnlySpan<char> secretKey)
     {
         DefaultTokenCreationOptions ??= new();
-        DefaultTokenCreationOptions.UseDefaultCredentials(secretKey);
+        DefaultTokenCreationOptions.UseSymmetricCredentials(secretKey);
     }
 }

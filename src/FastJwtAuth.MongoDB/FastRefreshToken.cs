@@ -2,6 +2,7 @@
 
 using global::MongoDB.Bson.Serialization.Attributes;
 
+[Open]
 public class FastRefreshToken<TUser> : IFastRefreshToken<string>
     where TUser : FastUser
 {
@@ -23,6 +24,7 @@ public class FastRefreshToken<TUser> : IFastRefreshToken<string>
     public DateTime ExpiresAt { get; set; }
 }
 
+[Open]
 public class FastRefreshToken : FastRefreshToken<FastUser>
 {
 

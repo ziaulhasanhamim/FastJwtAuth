@@ -13,7 +13,7 @@ using Xunit;
 using System.Text;
 using NSubstitute.Extensions;
 
-public class FastAuthServiceTests
+public sealed class FastAuthServiceTests
 {
     [Fact]
     public async Task CreateUserAsync_InvalidInput_FailureAuthResult()
@@ -34,7 +34,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key"),
+                .UseSymmetricCredentials("very-very-very secret key"),
             HasUsername = true,
             IsUsernameCompulsory = true
         };
@@ -57,7 +57,7 @@ public class FastAuthServiceTests
             .Contain(new[]
             {
                 "SomeOtherError",
-                FastAuthErrorCodes.PasswordVeryShort, 
+                FastAuthErrorCodes.PasswordVeryShort,
                 FastAuthErrorCodes.InvalidEmailFormat,
                 FastAuthErrorCodes.InvalidUsernameFormat
             });
@@ -82,19 +82,23 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key"),
+                .UseSymmetricCredentials("very-very-very secret key"),
             HasUsername = true,
             IsUsernameCompulsory = true
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions, userValidator);
 
-        authService.Configure()
-            .DoesNormalizedEmailExistMock(authService.NormalizeText(user.Email), default)
-            .Returns(true);
+        var normalizedEmail = authService.NormalizeText(user.Email);
 
         authService.Configure()
-            .DoesNormalizedUsernameExistMock(authService.NormalizeText(user.Username), default)
+            .DoesNormalizedEmailExistMock(normalizedEmail, default)
+            .Returns(true);
+
+        var normalizedUsername = authService.NormalizeText(user.Username);
+
+        authService.Configure()
+            .DoesNormalizedUsernameExistMock(normalizedUsername, default)
             .Returns(true);
 
         var result = await authService.CreateUser(user, password);
@@ -105,7 +109,7 @@ public class FastAuthServiceTests
             .Contain(new[]
             {
                 "SomeOtherError",
-                FastAuthErrorCodes.PasswordVeryShort, 
+                FastAuthErrorCodes.PasswordVeryShort,
                 FastAuthErrorCodes.DuplicateEmail,
                 FastAuthErrorCodes.DuplicateUsername
             });
@@ -125,7 +129,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key"),
+                .UseSymmetricCredentials("very-very-very secret key"),
             HasUsername = true,
             IsUsernameCompulsory = true
         };
@@ -165,7 +169,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseSymmetricCredentials("very-very-very secret key")
         };
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
@@ -192,7 +196,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseSymmetricCredentials("very-very-very secret key")
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
@@ -225,12 +229,11 @@ public class FastAuthServiceTests
         };
         var password = "testpass";
 
-
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseSymmetricCredentials("very-very-very secret key")
         };
 
         FastRefreshToken refreshToken = new()
@@ -253,7 +256,7 @@ public class FastAuthServiceTests
 
         var result = await authService.Authenticate(user.Email!, password);
 
-        commonAssert(user, refreshToken, fastAuthOptions, result);
+        CommonAssert(user, refreshToken, fastAuthOptions, result);
 
         user.LastLogin.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromHours(1));
 
@@ -270,7 +273,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseSymmetricCredentials("very-very-very secret key")
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
@@ -308,7 +311,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseSymmetricCredentials("very-very-very secret key")
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
@@ -339,7 +342,7 @@ public class FastAuthServiceTests
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
-                .UseDefaultCredentials("very-very-very secret key")
+                .UseSymmetricCredentials("very-very-very secret key")
         };
         FastRefreshToken refreshToken = new()
         {
@@ -356,13 +359,13 @@ public class FastAuthServiceTests
 
         var result = await authService.Refresh(refreshToken.Id!);
 
-        commonAssert(user, refreshToken, fastAuthOptions, result);
+        CommonAssert(user, refreshToken, fastAuthOptions, result);
 
         await authService.Received(1).RemoveRefreshTokenMock(refreshToken, default);
         await authService.Received(1).CommitDbChangesMock(default);
     }
 
-    private static void commonAssert(
+    private static void CommonAssert(
         FastUser user,
         FastRefreshToken refreshToken,
         FastAuthOptions<FastUser, FastRefreshToken, Guid> fastAuthOptions,
