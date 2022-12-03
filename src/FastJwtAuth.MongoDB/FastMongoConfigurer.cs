@@ -17,10 +17,15 @@ public static class FastMongoConfigurer
             cm.AutoMap();
             cm.MapIdMember(user => user.Id)
                 .SetSerializer(new StringSerializer(BsonType.ObjectId));
-            if (!authOptions.HasUsername)
+            if (authOptions.UsernameState is FastFieldState.Nope)
             {
                 cm.UnmapMember(user => user.Username);
                 cm.UnmapMember(user => user.NormalizedUsername);
+            }
+            if (authOptions.EmailState is FastFieldState.Nope)
+            {
+                cm.UnmapMember(user => user.Email);
+                cm.UnmapMember(user => user.NormalizedEmail);
             }
         });
 
@@ -31,11 +36,15 @@ public static class FastMongoConfigurer
                 .SetSerializer(new StringSerializer(BsonType.ObjectId));
         });
         List<CreateIndexModel<TUser>> indexes = new();
-        var mailIndexKeysDefinition = Builders<TUser>.IndexKeys
-            .Ascending(user => user.NormalizedEmail);
-        indexes.Add(new(mailIndexKeysDefinition));
 
-        if (authOptions.HasUsername)
+        if (authOptions.EmailState is not FastFieldState.Nope)
+        {
+            var mailIndexKeysDefinition = Builders<TUser>.IndexKeys
+                .Ascending(user => user.NormalizedEmail);
+            indexes.Add(new(mailIndexKeysDefinition));
+        }
+
+        if (authOptions.UsernameState is not FastFieldState.Nope)
         {
             var usernameNormalizedIndexKeysDefinition = Builders<TUser>.IndexKeys
                 .Ascending(user => user.NormalizedUsername);

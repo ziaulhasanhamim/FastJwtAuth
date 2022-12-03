@@ -4,16 +4,26 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
 {
     public async Task<CreateUserResult> CreateUser(TUser user, string password, CancellationToken cancellationToken = default)
     {
-        Guard.IsNotNull(user.Email);
         Guard.IsNotNull(password);
-        if (_authOptions.IsUsernameCompulsory)
+        if (_authOptions.UsernameState is FastFieldState.Required)
         {
             Guard.IsNotNull(user.Username);
         }
-        user.NormalizedEmail ??= NormalizeText(user.Email);
+        if (_authOptions.EmailState is FastFieldState.Required)
+        {
+            Guard.IsNotNull(user.Email);
+        }
+        if (user is { Username: null, Email: null })
+        {
+            throw new ArgumentException("User can not have Username and Email both null");
+        }
+        if (user.Email is not null)
+        {
+            user.NormalizedEmail ??= NormalizeEmail(user.Email);
+        }
         if (user.Username is not null)
         {
-            user.NormalizedUsername ??= NormalizeText(user.Username);
+            user.NormalizedUsername ??= NormalizeEmail(user.Username);
         }
 
         var validationErrors = await ValidateUser(user, password, cancellationToken);

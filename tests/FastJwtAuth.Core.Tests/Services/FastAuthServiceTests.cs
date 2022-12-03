@@ -15,56 +15,91 @@ using NSubstitute.Extensions;
 
 public sealed class FastAuthServiceTests
 {
-    [Fact]
-    public async Task CreateUserAsync_InvalidInput_FailureAuthResult()
+    public static object[][] InvalidInputTestData => new object[][]
     {
-        FastUser user = new()
+        new object[]
         {
-            Email = "Testest.com",
-            Username = "userNAME  dasd"
-        };
-        var password = "pass";
+            new FastUser()
+            {
+                Email = "Testest.com",
+                Username = "use sd"
+            },
+            "pass",
+            4,
+            new string[]
+            {
+                "SomeOtherError",
+                FastAuthErrorCodes.PasswordVeryShort,
+                FastAuthErrorCodes.InvalidEmailFormat,
+                FastAuthErrorCodes.InvalidUsernameFormat
+            }
+        }, // first test
+        new object[]
+        {
+            new FastUser()
+            {
+                Email = "Test@test.com",
+                Username = "user"
+            },
+            "passwordpassword",
+            3,
+            new string[]
+            {
+                "SomeOtherError",
+                FastAuthErrorCodes.PasswordVeryLong,
+                FastAuthErrorCodes.UsernameVeryShort
+            }
+        }, // second test
+        new object[]
+        {
+            new FastUser()
+            {
+                Email = "Test@test.com",
+                Username = "usernameusername"
+            },
+            "password",
+            2,
+            new string[]
+            {
+                "SomeOtherError",
+                FastAuthErrorCodes.UsernameVeryLong
+            }
+        }, // third test
+    };
 
+    [Theory]
+    [MemberData(nameof(InvalidInputTestData))]
+    public async Task CreateUser_WhenInvalidInput_ExpectToFail(
+        FastUser user, string password, int errorsCount, string[] errorCodes)
+    {
         var userValidator = Substitute.For<IFastUserValidator<FastUser>>();
 
         userValidator.Validate(user, password)
-            .Returns((false, new() { "SomeOtherError" }));
+            .Returns(new FastUserValidationResult(false, new() { "SomeOtherError" }));
 
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
                 .UseSymmetricCredentials("very-very-very secret key"),
-            HasUsername = true,
-            IsUsernameCompulsory = true
+            UsernameState = FastFieldState.Required,
+            EmailState = FastFieldState.Required,
+            UsernameMaxLength = 10,
+            PasswordMaxLength = 10
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions, userValidator);
 
-        authService.Configure()
-            .DoesNormalizedEmailExistMock(authService.NormalizeText(user.Email), default)
-            .Returns(true);
-
-        authService.Configure()
-            .DoesNormalizedUsernameExistMock(authService.NormalizeText(user.Username), default)
-            .Returns(true);
-
         var result = await authService.CreateUser(user, password);
 
         result.Success.Should().BeFalse();
-        result.ErrorCodes.Should().HaveCount(4);
+        result.ErrorCodes.Should().HaveCount(errorsCount);
         result.ErrorCodes.Should()
-            .Contain(new[]
-            {
-                "SomeOtherError",
-                FastAuthErrorCodes.PasswordVeryShort,
-                FastAuthErrorCodes.InvalidEmailFormat,
-                FastAuthErrorCodes.InvalidUsernameFormat
-            });
+            .Contain(errorCodes);
     }
 
     [Fact]
-    public async Task CreateUserAsync_DuplicateInput_FailureAuthResult()
+    public async Task CreateUser_WhenDuplicateInput_ExpectToFail()
     {
         FastUser user = new()
         {
@@ -76,26 +111,25 @@ public sealed class FastAuthServiceTests
         var userValidator = Substitute.For<IFastUserValidator<FastUser>>();
 
         userValidator.Validate(user, password)
-            .Returns((false, new() { "SomeOtherError" }));
+            .Returns(new FastUserValidationResult(false, new() { "SomeOtherError" }));
 
         FastAuthOptionsTestImpl fastAuthOptions = new()
         {
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
                 .UseSymmetricCredentials("very-very-very secret key"),
-            HasUsername = true,
-            IsUsernameCompulsory = true
+            UsernameState = FastFieldState.Required
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions, userValidator);
 
-        var normalizedEmail = authService.NormalizeText(user.Email);
+        var normalizedEmail = authService.NormalizeEmail(user.Email);
 
         authService.Configure()
             .DoesNormalizedEmailExistMock(normalizedEmail, default)
             .Returns(true);
 
-        var normalizedUsername = authService.NormalizeText(user.Username);
+        var normalizedUsername = authService.NormalizeUsername(user.Username);
 
         authService.Configure()
             .DoesNormalizedUsernameExistMock(normalizedUsername, default)
@@ -116,7 +150,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task CreateUserAsync_ValidInput_SuccessAuthResult()
+    public async Task CreateUserAsync_WhenValidInput_ThenAddUser()
     {
         FastUser user = new()
         {
@@ -130,8 +164,7 @@ public sealed class FastAuthServiceTests
             UseRefreshToken = true,
             DefaultTokenCreationOptions = new TokenCreationOptions()
                 .UseSymmetricCredentials("very-very-very secret key"),
-            HasUsername = true,
-            IsUsernameCompulsory = true
+            UsernameState = FastFieldState.Required
         };
         FastRefreshToken refreshToken = new()
         {
@@ -160,7 +193,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task LoginUserAsync_InvalidEmail_FailureAuthResult()
+    public async Task LoginUser_WhenInvalidEmail_ExpectToFail()
     {
         var userIdentifier = "test@mail.com";
         var password = "testpass";
@@ -173,7 +206,7 @@ public sealed class FastAuthServiceTests
         };
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
-        var result = await authService.Authenticate(userIdentifier, password);
+        var result = await authService.AuthenticateWithMail(userIdentifier, password);
 
         var failureResult = result.Should().BeOfType<AuthResult<FastUser>.Failure>()
             .Which;
@@ -183,7 +216,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task LoginUserAsync_InvalidPassword_FailureAuthResult()
+    public async Task LoginUser_WhenInvalidPassword_ExpectToFail()
     {
         FastUser user = new()
         {
@@ -201,7 +234,7 @@ public sealed class FastAuthServiceTests
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
 
-        var normalizedEmail = authService.NormalizeText(user.Email);
+        var normalizedEmail = authService.NormalizeEmail(user.Email);
 
         authService.Configure()
             .VerifyPassword(password, user.PasswordHash!)
@@ -211,7 +244,7 @@ public sealed class FastAuthServiceTests
             .GetUserByNormalizedEmailMock(normalizedEmail, default)
             .Returns(user);
 
-        var result = await authService.Authenticate(user.Email!, password);
+        var result = await authService.AuthenticateWithMail(user.Email!, password);
 
         var failureResult = result.Should().BeOfType<AuthResult<FastUser>.Failure>()
             .Which;
@@ -221,7 +254,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task LoginUserAsync_ValidInput_SuccessAuthResult()
+    public async Task LoginUser_WhenValidInput_ReturnTokens()
     {
         FastUser user = new()
         {
@@ -243,8 +276,9 @@ public sealed class FastAuthServiceTests
         };
 
         var authService = Substitute.ForPartsOf<FastAuthServiceMock>(fastAuthOptions);
+        var normalizedEmail = authService.NormalizeEmail(user.Email!);
         authService.Configure()
-            .GetUserByNormalizedEmailMock(authService.NormalizeText(user.Email!), default)
+            .GetUserByNormalizedEmailMock(normalizedEmail, default)
             .Returns(user);
 
         authService.Configure()
@@ -254,7 +288,7 @@ public sealed class FastAuthServiceTests
         authService.CreateRefreshTokenMock(user, default)
             .Returns(refreshToken);
 
-        var result = await authService.Authenticate(user.Email!, password);
+        var result = await authService.AuthenticateWithMail(user.Email!, password);
 
         CommonAssert(user, refreshToken, fastAuthOptions, result);
 
@@ -265,7 +299,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshAsync_InvalidRefreshToken_FailureAuthResult()
+    public async Task Refresh_WhenInvalidRefreshToken_ExpectToFail()
     {
         var refreshToken = "refreshtoken-string";
 
@@ -295,7 +329,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshAsync_ExpiredRefreshToken_FailureAuthResult()
+    public async Task Refresh_WhenExpiredRefreshToken_ExpectToFail()
     {
         FastUser user = new()
         {
@@ -332,7 +366,7 @@ public sealed class FastAuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshAsync_ValidRefreshToken_SuccessAuthResult()
+    public async Task RefreshAsync_WhenValidRefreshToken_ReturnTokens()
     {
         FastUser user = new()
         {

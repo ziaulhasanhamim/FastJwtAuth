@@ -14,7 +14,10 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
             return errors;
         }
         errors = ValidatePassword(password, errors);
-        errors = await ValidateEmail(user, errors, cancellationToken);
+        if (user.Email is not null)
+        {
+            errors = await ValidateEmail(user, errors, cancellationToken);
+        }
         if (user.Username is not null)
         {
             errors = await ValidateUsername(user, errors, cancellationToken);
@@ -28,8 +31,8 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
             { PasswordMinLength: var minLength } when password.Length < minLength =>
                 AddError(errors, FastAuthErrorCodes.PasswordVeryShort),
 
-            { PasswordMaxLength: int maxLength } when password.Length < maxLength =>
-                AddError(errors, FastAuthErrorCodes.PasswordVeryShort),
+            { PasswordMaxLength: int maxLength } when password.Length > maxLength =>
+                AddError(errors, FastAuthErrorCodes.PasswordVeryLong),
 
             _ => errors
         };
@@ -38,7 +41,7 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
         _emailValidator.IsValid(user.Email) switch
         {
             false => AddError(errors, FastAuthErrorCodes.InvalidEmailFormat),
-            true when await DoesNormalizedEmailExist(user.NormalizedEmail!, cancellationToken) =>
+            true when await NormalizedEmailExists(user.NormalizedEmail!, cancellationToken) =>
                 AddError(errors, FastAuthErrorCodes.DuplicateEmail),
             _ => errors
         };
@@ -55,7 +58,7 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
             { } when !_usernameValidationRegex.IsMatch(user.Username) =>
                 AddError(errors, FastAuthErrorCodes.InvalidUsernameFormat),
 
-            { } when await DoesNormalizedUsernameExist(user.NormalizedUsername!, cancellationToken) =>
+            { } when await NormalizedUsernameExists(user.NormalizedUsername!, cancellationToken) =>
                 AddError(errors, FastAuthErrorCodes.DuplicateUsername),
 
             _ => errors

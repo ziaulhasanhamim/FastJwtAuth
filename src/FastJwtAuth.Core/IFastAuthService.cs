@@ -30,7 +30,7 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     /// <param name="tokenCreationOptions"><see cref="TokenCreationOptions"/> containing required information for jwt signing. If none default one will be used from FastAuthOptions</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if login was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
-    Task<AuthResult<TUser>> Authenticate(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>> AuthenticateWithMail(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates an user
@@ -39,7 +39,7 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
     /// <param name="password">Password of user</param>
     /// <param name="cancellationToken">This can be used to cancel the operation</param>
     /// <returns><see cref="AuthResult{TUser}.Success"/> if login was successful else returns <see cref="AuthResult{TUser}.Failure"/></returns>
-    Task<AuthResult<TUser>> Authenticate(string email, string password, CancellationToken cancellationToken = default);
+    Task<AuthResult<TUser>> AuthenticateWithMail(string email, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Authenticates an user
@@ -77,5 +77,8 @@ public interface IFastAuthService<TUser, TRefreshToken, TUserKey>
 
     bool VerifyPassword(string rawPassword, string hashedPassword);
 
-    string NormalizeText(string email);
+    TUser GetUser(ClaimsIdentity claimsIdentity);
+
+    string NormalizeEmail(string email);
+    string NormalizeUsername(string username);
 }

@@ -71,7 +71,7 @@ public class FastAuthService<TUser, TRefreshToken>
         return refreshToken;
     }
 
-    protected override Task<bool> DoesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken)
+    protected override Task<bool> NormalizedEmailExists(string normalizedEmail, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
@@ -127,12 +127,41 @@ public class FastAuthService<TUser, TRefreshToken>
         return Task.CompletedTask;
     }
 
-    protected override Task<bool> DoesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken)
+    protected override Task<bool> NormalizedUsernameExists(string normalizedUsername, CancellationToken cancellationToken)
     {
         var filter = new BsonDocument()
         {
             [nameof(FastUser.NormalizedUsername)] = normalizedUsername
         };
         return _usersCollection.Find(filter).AnyAsync(cancellationToken);
+    }
+
+    public override TUser GetUser(ClaimsIdentity claimsIdentity)
+    {
+        TUser fastUser = new();
+        foreach (var claim in claimsIdentity.Claims)
+        {
+            if (claim.Type == JwtRegisteredClaimNames.Email)
+            {
+                fastUser.Email = claim.Value;
+                continue;
+            }
+            if (claim.Type == JwtRegisteredClaimNames.UniqueName)
+            {
+                fastUser.Username = claim.Value;
+                continue;
+            }
+            if (claim.Type == JwtRegisteredClaimNames.Sub)
+            {
+                fastUser.Id = claim.Value;
+                continue;
+            }
+            if (claim.Type == nameof(FastUser.CreatedAt))
+            {
+                fastUser.CreatedAt = DateTime.Parse(claim.Value);
+                continue;
+            }
+        }
+        return fastUser;
     }
 }

@@ -34,11 +34,11 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
 
         var claims = GetClaimsForUser(user);
         JwtSecurityToken securityToken = new(
+            issuer: tokenCreationOptions.Issuer,
+            audience: tokenCreationOptions.Audience,
             claims: claims,
             expires: DateTime.UtcNow.Add(tokenCreationOptions.AccessTokenLifeSpan),
-            signingCredentials: tokenCreationOptions.SigningCredentials,
-            issuer: tokenCreationOptions.Issuer,
-            audience: tokenCreationOptions.Audience);
+            signingCredentials: tokenCreationOptions.SigningCredentials);
         var accessToken = _jwtSecurityTokenHandler.WriteToken(securityToken);
         return new(
             accessToken,
@@ -69,5 +69,9 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
         return claims;
     }
 
-    public virtual string NormalizeText(string text) => text.Normalize().ToUpperInvariant();
+    public abstract TUser GetUser(ClaimsIdentity claimsIdentity);
+
+    public virtual string NormalizeEmail(string email) => email.Normalize().ToUpperInvariant();
+
+    public virtual string NormalizeUsername(string username) => username.Normalize().ToUpperInvariant();
 }

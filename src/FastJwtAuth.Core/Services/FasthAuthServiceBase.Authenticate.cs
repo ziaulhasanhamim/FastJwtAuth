@@ -2,7 +2,7 @@ namespace FastJwtAuth.Core.Services;
 
 public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey>
 {
-    public async Task<AuthResult<TUser>> Authenticate(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)
+    public async Task<AuthResult<TUser>> AuthenticateWithMail(string email, string password, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tokenCreationOptions.SigningCredentials);
         var user = await GetUserByEmail(email, cancellationToken);
@@ -29,13 +29,13 @@ public abstract partial class FastAuthServiceBase<TUser, TRefreshToken, TUserKey
         return result;
     }
 
-    public Task<AuthResult<TUser>> Authenticate(string email, string password, CancellationToken cancellationToken = default)
+    public Task<AuthResult<TUser>> AuthenticateWithMail(string email, string password, CancellationToken cancellationToken = default)
     {
         if (_authOptions.DefaultTokenCreationOptions is null)
         {
             throw new ArgumentNullException(nameof(_authOptions.DefaultTokenCreationOptions), "No TokenCreationOptions was provided and DefaultTokenCreationOptions on FastAuthOptions is also null");
         }
-        return Authenticate(email, password, _authOptions.DefaultTokenCreationOptions, cancellationToken);
+        return AuthenticateWithMail(email, password, _authOptions.DefaultTokenCreationOptions, cancellationToken);
     }
 
     public async Task<AuthResult<TUser>.Success> Authenticate(TUser user, TokenCreationOptions tokenCreationOptions, CancellationToken cancellationToken = default)

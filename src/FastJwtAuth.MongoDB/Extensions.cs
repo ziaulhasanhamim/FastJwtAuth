@@ -15,6 +15,14 @@ public static class Extensions
     {
         MongoFastAuthOptions<TUser, TRefreshToken> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is
+            {
+                EmailState: FastFieldState.Nope,
+                UsernameState: FastFieldState.Nope,
+            })
+        {
+            throw new ArgumentException("User entity must have One of these EmailState or UsernameState");
+        }
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
             throw new ArgumentNullException("DefaultTokenCreationOptions.SigningCredentials", "You should set DefaultTokenCreationOptions.SigningCredentials first");
@@ -36,6 +44,14 @@ public static class Extensions
     {
         MongoFastAuthOptions<TUser> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is
+            {
+                EmailState: FastFieldState.Nope,
+                UsernameState: FastFieldState.Nope,
+            })
+        {
+            throw new ArgumentException("User entity must have One of these EmailState or UsernameState");
+        }
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
             throw new ArgumentNullException(
@@ -57,6 +73,14 @@ public static class Extensions
     {
         MongoFastAuthOptions authOptions = new();
         optionAction(authOptions);
+        if (authOptions is
+            {
+                EmailState: FastFieldState.Nope,
+                UsernameState: FastFieldState.Nope,
+            })
+        {
+            throw new ArgumentException("User entity must have One of these EmailState or UsernameState");
+        }
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
             throw new ArgumentNullException(
@@ -70,37 +94,4 @@ public static class Extensions
 
         services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(sp => sp.GetService<IFastAuthService>()!);
     }
-
-    public static TUser ToFastUser<TUser>(this ClaimsIdentity claimsIdentity)
-        where TUser : FastUser, new()
-    {
-        TUser fastUser = new();
-        foreach (var claim in claimsIdentity.Claims)
-        {
-            if (claim.Type == JwtRegisteredClaimNames.Email)
-            {
-                fastUser.Email = claim.Value;
-                continue;
-            }
-            if (claim.Type == JwtRegisteredClaimNames.UniqueName)
-            {
-                fastUser.Username = claim.Value;
-                continue;
-            }
-            if (claim.Type == JwtRegisteredClaimNames.Sub)
-            {
-                fastUser.Id = claim.Value;
-                continue;
-            }
-            if (claim.Type == nameof(FastUser.CreatedAt))
-            {
-                fastUser.CreatedAt = DateTime.Parse(claim.Value);
-                continue;
-            }
-        }
-        return fastUser;
-    }
-
-    public static FastUser MapClaimsToFastUser(this ClaimsIdentity claimsIdentity) =>
-        claimsIdentity.ToFastUser<FastUser>();
 }

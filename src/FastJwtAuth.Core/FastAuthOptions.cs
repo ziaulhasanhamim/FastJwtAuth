@@ -1,4 +1,6 @@
-﻿namespace FastJwtAuth;
+﻿using Microsoft.IdentityModel.Tokens;
+
+namespace FastJwtAuth;
 
 public abstract class FastAuthOptions<TUser, TRefreshToken, TUserKey>
     where TUser : IFastUser<TUserKey>, new()
@@ -12,48 +14,37 @@ public abstract class FastAuthOptions<TUser, TRefreshToken, TUserKey>
     public bool UseRefreshToken { get; set; }
 
     /// <summary>
-    /// This will be called when generating claims. You can add claims to the provided list
+    /// This will be called when generating claims. You can add, remove or modify claims
     /// </summary>
     public Action<List<Claim>, TUser>? OnClaimsGeneration { get; set; }
 
-    private bool _hasUsername;
+    /// <summary>
+    /// Defaults to <see cref="FastFieldState.Nope"/>
+    /// </summary>
+    public FastFieldState UsernameState { get; set; }
 
-    public bool HasUsername
-    {
-        get => _hasUsername;
-        set
-        {
-            if (!value)
-            {
-                _isUsernameCompulsory = false;
-            }
-            _hasUsername = value;
-        }
-    }
+    /// <summary>
+    /// Defaults to <see cref="FastFieldState.Required"/>
+    /// </summary>
+    public FastFieldState EmailState { get; set; } = FastFieldState.Required;
 
-    private bool _isUsernameCompulsory;
-
-    public bool IsUsernameCompulsory
-    {
-        get => _isUsernameCompulsory;
-        set
-        {
-            if (value)
-            {
-                Guard.IsTrue(HasUsername);
-            }
-            _isUsernameCompulsory = value;
-        }
-    }
-
+    /// <summary>
+    /// Defaults to 8
+    /// </summary>
     public int PasswordMinLength { get; set; } = 8;
 
     public int? PasswordMaxLength { get; set; }
 
+    /// <summary>
+    /// Defaults to 5
+    /// </summary>
     public int UsernameMinLength { get; set; } = 5;
 
     public int? UsernameMaxLength { get; set; }
 
+    /// <summary>
+    /// Create and set <see cref="TokenCreationOptions.SigningCredentials"/> with <paramref name="secretKey"/> and <see cref="SecurityAlgorithms.HmacSha256"/> algorithm
+    /// </summary>
     public void UseDefaultCredentials(ReadOnlySpan<char> secretKey)
     {
         DefaultTokenCreationOptions ??= new();

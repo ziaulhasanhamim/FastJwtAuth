@@ -1,6 +1,7 @@
 namespace FastJwtAuth.EFCore.Services;
 
 using System.Buffers;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,7 +52,7 @@ public class FastAuthService<TUser, TRefreshToken, TDbContext>
         return refreshToken;
     }
 
-    protected override Task<bool> DoesNormalizedEmailExist(string nomalizedEmail, CancellationToken cancellationToken = default) =>
+    protected override Task<bool> NormalizedEmailExists(string nomalizedEmail, CancellationToken cancellationToken = default) =>
         _dbContext.Set<TUser>()
             .AnyAsync(user => user.NormalizedEmail == nomalizedEmail, cancellationToken);
 
@@ -91,7 +92,36 @@ public class FastAuthService<TUser, TRefreshToken, TDbContext>
         return _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    protected override Task<bool> DoesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken) =>
+    protected override Task<bool> NormalizedUsernameExists(string normalizedUsername, CancellationToken cancellationToken) =>
         _dbContext.Set<TUser>()
             .AnyAsync(user => user.NormalizedUsername == normalizedUsername, cancellationToken);
+
+    public override TUser GetUser(ClaimsIdentity claimsIdentity)
+    {
+        TUser fastUser = new();
+        foreach (var claim in claimsIdentity.Claims)
+        {
+            if (claim.Type == JwtRegisteredClaimNames.Email)
+            {
+                fastUser.Email = claim.Value;
+                continue;
+            }
+            if (claim.Type == JwtRegisteredClaimNames.UniqueName)
+            {
+                fastUser.Username = claim.Value;
+                continue;
+            }
+            if (claim.Type == JwtRegisteredClaimNames.Sub)
+            {
+                fastUser.Id = Guid.Parse(claim.Value);
+                continue;
+            }
+            if (claim.Type == nameof(FastUser.CreatedAt))
+            {
+                fastUser.CreatedAt = DateTime.Parse(claim.Value);
+                continue;
+            }
+        }
+        return fastUser;
+    }
 }

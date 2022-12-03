@@ -36,7 +36,8 @@ public abstract class FastAuthServiceMock : FastAuthServiceBase<FastUser, FastRe
     protected sealed override ValueTask<List<string>?> ValidateUser(FastUser user, string password, CancellationToken cancellationToken = default) =>
         base.ValidateUser(user, password, cancellationToken);
 
-    public sealed override string NormalizeText(string text) => base.NormalizeText(text);
+    public sealed override string NormalizeUsername(string username) => base.NormalizeEmail(username);
+    public sealed override string NormalizeEmail(string email) => base.NormalizeEmail(email);
 
     protected override Task AddUser(FastUser user, CancellationToken cancellationToken)
     {
@@ -52,14 +53,15 @@ public abstract class FastAuthServiceMock : FastAuthServiceBase<FastUser, FastRe
 
     public abstract ValueTask<FastRefreshToken> CreateRefreshTokenMock(FastUser user, CancellationToken cancellationToken);
 
-    protected override Task<bool> DoesNormalizedEmailExist(string normalizedEmail, CancellationToken cancellationToken)
+    protected override Task<bool> NormalizedEmailExists(string normalizedEmail, CancellationToken cancellationToken)
     {
         return DoesNormalizedEmailExistMock(normalizedEmail, cancellationToken);
     }
+    public sealed override FastUser GetUser(ClaimsIdentity claimsIdentity) => new();
 
     public abstract Task<bool> DoesNormalizedEmailExistMock(string normalizedEmail, CancellationToken cancellationToken);
 
-    protected override Task<bool> DoesNormalizedUsernameExist(string normalizedUsername, CancellationToken cancellationToken)
+    protected override Task<bool> NormalizedUsernameExists(string normalizedUsername, CancellationToken cancellationToken)
     {
         return DoesNormalizedUsernameExistMock(normalizedUsername, cancellationToken);
     }

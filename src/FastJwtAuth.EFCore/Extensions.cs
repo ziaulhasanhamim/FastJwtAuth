@@ -3,8 +3,10 @@
 using FastJwtAuth.Core.Services;
 using FastJwtAuth.EFCore.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -22,35 +24,82 @@ public static class Extensions
         var userEntityBuilder = builder.Entity<TUser>();
 
         userEntityBuilder.HasKey(user => user.Id);
-        userEntityBuilder.Property(user => user.Email)
-            .IsRequired();
-        userEntityBuilder.Property(user => user.NormalizedEmail)
-            .IsRequired();
-        userEntityBuilder.HasIndex(user => user.NormalizedEmail);
         userEntityBuilder.Property(user => user.PasswordHash)
             .IsRequired();
         userEntityBuilder.Property(user => user.CreatedAt)
             .IsRequired();
 
-        if (authOptions.HasUsername)
-        {
-            userEntityBuilder.HasIndex(user => user.NormalizedUsername);
-            if (authOptions.IsUsernameCompulsory)
-            {
-                userEntityBuilder.Property(user => user.Username)
-                    .IsRequired();
-            }
-        }
-        else
-        {
-            userEntityBuilder.Ignore(user => user.Username);
-            userEntityBuilder.Ignore(user => user.NormalizedUsername);
-        }
+        ConfigureEmailBehavior(authOptions, userEntityBuilder);
+        ConfigureUsernameBehavior(authOptions, userEntityBuilder);
 
         if (authOptions.UseRefreshToken)
         {
             builder.Entity<TRefreshToken>();
         }
+    }
+
+    private static void ConfigureEmailBehavior<TUser, TRefreshToken>(
+        EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions, EntityTypeBuilder<TUser> userEntityBuilder)
+        where TUser : FastUser, new()
+        where TRefreshToken : FastRefreshToken<TUser>, new()
+    {
+        if (authOptions.EmailState == FastFieldState.Nope)
+        {
+            userEntityBuilder.Ignore(user => user.Email);
+            userEntityBuilder.Ignore(user => user.NormalizedEmail);
+            return;
+        }
+        if (authOptions.EmailState == FastFieldState.Has)
+        {
+            userEntityBuilder.HasIndex(user => user.NormalizedUsername);
+            return;
+        }
+        if (authOptions.EmailState == FastFieldState.Required)
+        {
+            userEntityBuilder.Property(user => user.Email)
+                .IsRequired();
+            userEntityBuilder.Property(user => user.NormalizedEmail)
+                .IsRequired();
+            userEntityBuilder.HasIndex(user => user.NormalizedEmail);
+            return;
+        }
+#if NET6_0
+    throw new NotImplementedException();
+#elif NET7_0_OR_GREATER
+    throw new UnreachableException();
+#endif
+    }
+
+    private static void ConfigureUsernameBehavior<TUser, TRefreshToken>(
+        EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions, EntityTypeBuilder<TUser> userEntityBuilder)
+        where TUser : FastUser, new()
+        where TRefreshToken : FastRefreshToken<TUser>, new()
+    {
+        if (authOptions.UsernameState == FastFieldState.Nope)
+        {
+            userEntityBuilder.Ignore(user => user.Username);
+            userEntityBuilder.Ignore(user => user.NormalizedUsername);
+            return;
+        }
+        if (authOptions.UsernameState == FastFieldState.Has)
+        {
+            userEntityBuilder.HasIndex(user => user.NormalizedUsername);
+            return;
+        }
+        if (authOptions.UsernameState == FastFieldState.Required)
+        {
+            userEntityBuilder.Property(user => user.Username)
+                .IsRequired();
+            userEntityBuilder.Property(user => user.NormalizedUsername)
+                .IsRequired();
+            userEntityBuilder.HasIndex(user => user.NormalizedUsername);
+            return;
+        }
+#if NET6_0
+    throw new NotImplementedException();
+#elif NET7_0_OR_GREATER
+    throw new UnreachableException();
+#endif
     }
 
     public static void ConfigureAuthModels<TUser>(
@@ -77,10 +126,18 @@ public static class Extensions
     {
         EFCoreFastAuthOptions<TUser, TRefreshToken> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is
+            {
+                EmailState: FastFieldState.Nope,
+                UsernameState: FastFieldState.Nope,
+            })
+        {
+            throw new ArgumentException("User entity must have One of these EmailState or UsernameState");
+        }
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
             throw new ArgumentNullException(
-                "DefaultTokenCreationOptions.SigningCredentials", 
+                "DefaultTokenCreationOptions.SigningCredentials",
                 "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
@@ -98,6 +155,14 @@ public static class Extensions
     {
         EFCoreFastAuthOptions<TUser> authOptions = new();
         optionAction(authOptions);
+        if (authOptions is
+            {
+                EmailState: FastFieldState.Nope,
+                UsernameState: FastFieldState.Nope,
+            })
+        {
+            throw new ArgumentException("User entity must have One of these EmailState or UsernameState");
+        }
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
             throw new ArgumentNullException(
@@ -122,10 +187,18 @@ public static class Extensions
     {
         EFCoreFastAuthOptions authOptions = new();
         optionAction(authOptions);
+        if (authOptions is
+            {
+                EmailState: FastFieldState.Nope,
+                UsernameState: FastFieldState.Nope,
+            })
+        {
+            throw new ArgumentException("User entity must have One of these EmailState or UsernameState");
+        }
         if (authOptions is { DefaultTokenCreationOptions.SigningCredentials: null })
         {
             throw new ArgumentNullException(
-                "DefaultTokenCreationOptions.SigningCredentials", 
+                "DefaultTokenCreationOptions.SigningCredentials",
                 "You should set DefaultTokenCreationOptions.SigningCredentials first");
         }
         services.AddSingleton(authOptions);
@@ -135,39 +208,5 @@ public static class Extensions
 
         services.AddScoped<IFastAuthService<FastUser, FastRefreshToken>>(
             sp => sp.GetService<IFastAuthService>()!);
-    }
-
-    public static TUser ToFastUser<TUser>(this ClaimsIdentity claimsIdentity)
-        where TUser : FastUser, new()
-    {
-        TUser fastUser = new();
-        foreach (var claim in claimsIdentity.Claims)
-        {
-            if (claim.Type == JwtRegisteredClaimNames.Email)
-            {
-                fastUser.Email = claim.Value;
-                continue;
-            }
-            if (claim.Type == JwtRegisteredClaimNames.Sub)
-            {
-                fastUser.Id = Guid.Parse(claim.Value);
-                continue;
-            }
-            if (claim.Type == JwtRegisteredClaimNames.UniqueName)
-            {
-                fastUser.Username = claim.Value;
-                continue;
-            }
-            if (claim.Type == nameof(FastUser.CreatedAt))
-            {
-                fastUser.CreatedAt = DateTime.Parse(claim.Value);
-            }
-        }
-        return fastUser;
-    }
-
-    public static FastUser ToFastUser(this ClaimsIdentity claimsIdentity)
-    {
-        return ToFastUser<FastUser>(claimsIdentity);
     }
 }
